@@ -1,0 +1,242 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/project-type.schema.json",
+  "title": "AI Agent Workflow Project Type DSL",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["project_type"],
+  "properties": {
+    "project_type": { "$ref": "#/$defs/projectType" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1
+    },
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "parameter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "required"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "type": {
+          "type": "string",
+          "enum": ["string", "number", "boolean", "object", "array"]
+        },
+        "required": { "type": "boolean" },
+        "default": {},
+        "description": { "type": "string" }
+      }
+    },
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "description", "default_prompt", "allowed_task_types"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "kind": {
+          "type": "string",
+          "enum": ["human", "agent"]
+        },
+        "description": { "type": "string" },
+        "default_prompt": { "type": "string" },
+        "allowed_task_types": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/identifier" }
+        }
+      }
+    },
+    "artifactType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "content_kind"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "description": { "type": "string" },
+        "content_kind": {
+          "type": "string",
+          "enum": ["markdown", "text", "json", "code", "bundle"]
+        },
+        "schema_hint": { "type": "string" }
+      }
+    },
+    "taskInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "artifact_type", "required"],
+      "properties": {
+        "name": { "$ref": "#/$defs/identifier" },
+        "artifact_type": { "$ref": "#/$defs/identifier" },
+        "required": { "type": "boolean" }
+      }
+    },
+    "taskOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "artifact_type"],
+      "properties": {
+        "name": { "$ref": "#/$defs/identifier" },
+        "artifact_type": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "taskType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "allowed_roles", "inputs", "outputs", "default_prompt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "description": { "type": "string" },
+        "allowed_roles": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/identifier" }
+        },
+        "inputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/taskInput" }
+        },
+        "outputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/taskOutput" }
+        },
+        "default_prompt": { "type": "string" }
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "kind": {
+          "type": "string",
+          "enum": ["input", "work", "review", "end"]
+        },
+        "title": { "type": "string" },
+        "task_type": { "$ref": "#/$defs/identifier" },
+        "role": { "$ref": "#/$defs/identifier" },
+        "prompt_override": { "type": "string" },
+        "sprint_eligible": { "type": "boolean" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "kind": { "const": "end" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                { "required": ["task_type"] },
+                { "required": ["role"] }
+              ]
+            }
+          },
+          "else": {
+            "required": ["task_type", "role"]
+          }
+        }
+      ]
+    },
+    "artifactMap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["to_input"],
+      "properties": {
+        "from_output": { "$ref": "#/$defs/identifier" },
+        "from_input": { "$ref": "#/$defs/identifier" },
+        "to_input": { "$ref": "#/$defs/identifier" }
+      },
+      "oneOf": [
+        {
+          "required": ["from_output"],
+          "not": { "required": ["from_input"] }
+        },
+        {
+          "required": ["from_input"],
+          "not": { "required": ["from_output"] }
+        }
+      ]
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to", "on", "artifact_map"],
+      "properties": {
+        "from": { "$ref": "#/$defs/identifier" },
+        "to": { "$ref": "#/$defs/identifier" },
+        "on": { "$ref": "#/$defs/nonEmptyString" },
+        "artifact_map": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/artifactMap" }
+        }
+      }
+    },
+    "workflowType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "nodes", "edges"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "description": { "type": "string" },
+        "nodes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/node" }
+        },
+        "edges": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/edge" }
+        }
+      }
+    },
+    "projectType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "version",
+        "description",
+        "parameters",
+        "roles",
+        "artifact_types",
+        "task_types",
+        "workflow_types"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "description": { "type": "string" },
+        "execution_mode": {
+          "type": "string",
+          "enum": ["auto", "manual"],
+          "default": "auto"
+        },
+        "parameters": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/parameter" }
+        },
+        "roles": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/role" }
+        },
+        "artifact_types": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/artifactType" }
+        },
+        "task_types": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/taskType" }
+        },
+        "workflow_types": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/workflowType" }
+        }
+      }
+    }
+  }
+}
