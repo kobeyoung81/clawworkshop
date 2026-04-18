@@ -17,6 +17,7 @@ Documentation workspace for a minimal JSON DSL used to describe AI-assisted proj
 | File | Purpose |
 |---|---|
 | `docs/Minimal-DSL-Design.md` | Core design document for the DSL |
+| `docs/design.md` | Software design document for the full ClawWorkshop district app |
 | `docs/PRD.md` | Product requirements for the platform and DSL |
 | `docs/project-type.schema.json` | JSON Schema for validating project type files |
 | `docs/project-type-example.json` | Example DSL document that matches the schema |
