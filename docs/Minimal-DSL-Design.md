@@ -22,13 +22,17 @@ Artifacts may be declared at project, workflow, or node scope. The declaration l
 
 ### 2.4 Direct artifact references
 
-Nodes reference artifacts directly by artifact id using `reads` and `writes`. The DSL does not use named input/output ports or `artifact_map`.
+`input` and `work` nodes reference artifacts directly by artifact id using `reads` and `writes`. The DSL does not use named input/output ports or `artifact_map`.
 
-### 2.5 Graph-driven execution
+### 2.5 Special interactive nodes
+
+`review` and `feedback` nodes are special human-interaction nodes. They may be multi-round, and the human input they collect is routed internally to downstream nodes rather than modeled as a normal artifact write.
+
+### 2.6 Graph-driven execution
 
 Execution control is expressed through node kinds and edges. Review and feedback are explicit workflow constructs, so the DSL does not need a separate `execution_mode`.
 
-### 2.6 Human and AI compatibility
+### 2.7 Human and AI compatibility
 
 The model must support both human and AI roles without giving either side a special top-level schema.
 
@@ -76,7 +80,7 @@ A non-terminal node contains:
 - a role
 - a prompt
 - `reads`
-- `writes`
+- `writes`, if the node is `input` or `work`
 - optional node-scoped artifacts
 
 At runtime, the project instance stores the actual content for artifacts declared by the project type, workflows, and nodes.
@@ -171,7 +175,6 @@ Artifact ids should be stable, human-readable names such as:
 
 - `brief.md`
 - `prd.md`
-- `prd-feedback.md`
 - `wireframe.png`
 
 The goal is to model concrete deliverables, not a reusable type with many runtime instances.
@@ -249,8 +252,9 @@ Each workflow node is an authored unit of work.
 - `role` required except for end nodes
 - `prompt` optional
 - `reads` required except for end nodes
-- `writes` required except for end nodes
-- `artifacts` optional, for node-scoped artifact declarations
+- `writes` required for `input` and `work` nodes
+- `writes` should not be used on `review`, `feedback`, or `end` nodes
+- `artifacts` optional, for node-scoped artifact declarations on `input` and `work` nodes
 
 #### `reads`
 
@@ -261,6 +265,8 @@ An array of artifact ids the node requires access to before it can run.
 An array of artifact ids the node may create or update while it runs.
 
 The arrays contain artifact ids directly, not named ports. A node that revises `prd.md` can list `prd.md` in both `reads` and `writes`.
+
+`writes` is part of the normal artifact flow for `input` and `work` nodes only.
 
 #### Supported node kinds
 
@@ -289,6 +295,12 @@ Typical outcomes:
 - `approved`
 - `revise`
 
+Review is a special interactive node kind:
+
+- it may involve multiple rounds of human discussion before emitting an outcome
+- it reads artifacts, but does not model the review conversation as a normal artifact write
+- when routed to a downstream node, the engine may provide the collected human input internally as execution context
+
 ##### `feedback`
 
 Represents human commentary, clarification, or revision notes that are not themselves the approval gate.
@@ -296,6 +308,12 @@ Represents human commentary, clarification, or revision notes that are not thems
 Typical outcome:
 
 - `completed`
+
+Feedback is also a special interactive node kind:
+
+- it may involve multiple rounds of human discussion
+- it reads artifacts, but does not use `writes` for that human input
+- downstream nodes may receive the collected human input internally from the engine
 
 ##### `end`
 
@@ -342,6 +360,8 @@ An edge becomes active when the source node finishes with the specified outcome.
 
 Edges do not carry artifact maps. Once a node is activated, it reads the artifacts named in its own `reads` array from the current project instance state.
 
+For `review` and `feedback` nodes, outgoing edges may also carry internally managed human input to the downstream node. That human input is runtime state, not a declared artifact.
+
 #### Example
 
 ```json
@@ -377,7 +397,8 @@ A node may only be assigned to an actor compatible with its role.
 
 A node completion:
 
-- may create or update the artifacts listed in `writes`
+- for `input` and `work`, may create or update the artifacts listed in `writes`
+- for `review` and `feedback`, may collect multi-round human input that the engine keeps internally
 - emits an outcome value
 
 ### 8.4 Routing
@@ -411,8 +432,9 @@ A valid DSL document should satisfy these conditions:
 10. Every edge source and target node exists.
 11. Review nodes should use `approved` and `revise` outcomes.
 12. Feedback nodes should typically use `completed`.
-13. End nodes do not define role, prompt, reads, writes, or local artifacts.
-14. Artifact references should resolve unambiguously for each node.
+13. `review` and `feedback` nodes should not define `writes`.
+14. End nodes do not define role, prompt, reads, writes, or local artifacts.
+15. Artifact references should resolve unambiguously for each node.
 
 ## 10. JSON Schema Guidance
 
@@ -423,7 +445,7 @@ The accompanying schema should validate:
 - allowed node kinds
 - allowed role kinds
 - allowed artifact content kinds
-- conditional rules for end nodes
+- conditional rules for end, review, and feedback nodes
 - array shapes for `reads` and `writes`
 
 The schema intentionally does not enforce every semantic rule. Cross-reference validation, scope resolution, and graph integrity should also be checked by the platform after schema validation.

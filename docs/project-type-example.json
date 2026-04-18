@@ -43,11 +43,6 @@
             "content_kind": "markdown"
           },
           {
-            "id": "prd-feedback.md",
-            "description": "Workflow-local feedback captured from feedback or review nodes",
-            "content_kind": "markdown"
-          },
-          {
             "id": "wireframe.png",
             "description": "Approved wireframe output for the workflow",
             "content_kind": "image"
@@ -81,8 +76,7 @@
             "description": "Capture human commentary on the drafted PRD before formal approval.",
             "role": "human_owner",
             "prompt": "Provide concrete feedback on what should change in the PRD before approval.",
-            "reads": ["prd.md"],
-            "writes": ["prd-feedback.md"]
+            "reads": ["prd.md"]
           },
           {
             "id": "revise_prd",
@@ -90,8 +84,8 @@
             "title": "Revise PRD",
             "description": "Revise the PRD using the collected human feedback.",
             "role": "product_agent",
-            "prompt": "Update the PRD so that it fully addresses the human feedback while preserving clear scope and requirements.",
-            "reads": ["prd.md", "prd-feedback.md"],
+            "prompt": "Update the PRD so that it fully addresses the internal human input supplied by the upstream feedback or review node while preserving clear scope and requirements.",
+            "reads": ["prd.md"],
             "writes": ["prd.md"]
           },
           {
@@ -101,8 +95,7 @@
             "description": "Approve the revised PRD or send it back for another revision.",
             "role": "human_owner",
             "prompt": "Approve only when the PRD is ready to drive design work; otherwise request revision with concrete guidance.",
-            "reads": ["prd.md"],
-            "writes": ["prd-feedback.md"]
+            "reads": ["prd.md"]
           },
           {
             "id": "create_wireframe",

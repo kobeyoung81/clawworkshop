@@ -10,7 +10,8 @@ The current DSL model is intentionally compact:
 - nodes and tasks are merged into one concept
 - artifacts are concrete named deliverables such as `prd.md`, not artifact types
 - artifact definitions are scoped to project, workflow, or node
-- nodes reference artifacts directly by id through `reads` and `writes`
+- `input` and `work` nodes reference artifacts directly by id through `reads` and `writes`
+- `review` and `feedback` nodes are special interactive nodes whose human input is routed internally
 - execution flow is encoded in the graph rather than a separate execution-mode setting
 
 ## 2. Problem Statement
@@ -31,7 +32,8 @@ The platform should provide a reusable structure for:
 - Model executable work directly as workflow nodes
 - Define concrete artifacts once in the schema and keep their runtime content in the project instance
 - Support artifact definitions at project, workflow, and node scope
-- Let nodes read and write artifacts directly by artifact id
+- Let `input` and `work` nodes read and write artifacts directly by artifact id
+- Treat `review` and `feedback` nodes as multi-round human-interaction nodes rather than normal artifact writers
 - Represent human approval and human feedback as first-class workflow constructs
 - Keep the schema and example aligned with the design docs
 
@@ -65,7 +67,7 @@ A workflow type is a directed graph of executable nodes and edges. It may also d
 
 ### 5.4 Artifact
 
-An artifact is a concrete deliverable declared in the schema, such as `brief.md`, `prd.md`, `prd-feedback.md`, or `wireframe.png`.
+An artifact is a concrete deliverable declared in the schema, such as `brief.md`, `prd.md`, or `wireframe.png`.
 
 - the schema declares that the artifact may exist
 - the project instance stores the actual content for that artifact
@@ -83,23 +85,28 @@ A node is the unit of authored work in the DSL. It combines the former task cont
 - the role responsible for the node
 - the prompt or instructions for that node
 - which artifacts it reads
-- which artifacts it writes
+- which artifacts it writes, if it is an `input` or `work` node
 - optional node-scoped artifact declarations
 
 ### 5.6 Review Node
 
 A `review` node captures an approval decision. Its important outcomes are `approved` and `revise`.
 
+It may involve multiple rounds of human discussion before reaching an outcome. The human input gathered during review is not modeled as a normal artifact write; it is delivered internally to downstream nodes when relevant.
+
 ### 5.7 Feedback Node
 
 A `feedback` node captures human commentary without serving as the formal approval gate. It is used when the workflow needs human direction, clarification, or revision notes but not a yes/no decision.
+
+Like `review`, it may be multi-round. Its human input is treated as internal workflow context rather than a concrete artifact output.
 
 ## 6. Execution Model
 
 The workflow graph drives execution.
 
 - nodes become ready when required upstream conditions are satisfied and the artifacts in `reads` are available
-- nodes may create or update the artifacts listed in `writes`
+- `input` and `work` nodes may create or update the artifacts listed in `writes`
+- `review` and `feedback` nodes collect human input internally and can pass that input to downstream nodes without writing a normal artifact
 - edges route control by outcome
 - human approval is modeled through `review` nodes
 - human commentary is modeled through `feedback` nodes
@@ -116,9 +123,10 @@ The platform must:
 4. Support project-, workflow-, and node-scoped artifact declarations
 5. Restrict artifact `content_kind` to `markdown` and `image`
 6. Support node kinds `input`, `work`, `review`, `feedback`, and `end`
-7. Support direct artifact-id references from nodes through `reads` and `writes`
-8. Keep edges focused on control-flow outcomes rather than artifact port mapping
-9. Allow prompt composition from role defaults and node-specific instructions
+7. Support direct artifact-id references from `input` and `work` nodes through `reads` and `writes`
+8. Treat `review` and `feedback` nodes as special interactive nodes with internally routed human input
+9. Keep edges focused on control-flow outcomes rather than artifact port mapping
+10. Allow prompt composition from role defaults and node-specific instructions
 
 ## 8. Success Criteria
 

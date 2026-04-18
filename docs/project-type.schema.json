@@ -84,6 +84,23 @@
       "allOf": [
         {
           "if": {
+            "properties": {
+              "kind": { "enum": ["review", "feedback"] }
+            },
+            "required": ["kind"]
+          },
+          "then": {
+            "required": ["description", "role", "reads"],
+            "not": {
+              "anyOf": [
+                { "required": ["writes"] },
+                { "required": ["artifacts"] }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
             "properties": { "kind": { "const": "end" } },
             "required": ["kind"]
           },
@@ -100,7 +117,18 @@
             }
           },
           "else": {
-            "required": ["description", "role", "reads", "writes"]
+            "required": ["description", "role", "reads"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": { "enum": ["input", "work"] }
+            },
+            "required": ["kind"]
+          },
+          "then": {
+            "required": ["writes"]
           }
         }
       ]
