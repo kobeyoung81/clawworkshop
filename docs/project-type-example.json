@@ -1,350 +1,167 @@
 {
   "project_type": {
-    "id": "software_feature_project",
-    "name": "Software Feature Project",
+    "id": "product_discovery_project",
+    "name": "Product Discovery Project",
     "version": "1.0.0",
-    "description": "A project type for delivering a software feature end-to-end using AI agents with human review gates.",
-    "execution_mode": "auto",
-    "parameters": [
-      {
-        "id": "primary_language",
-        "type": "string",
-        "required": false,
-        "default": "TypeScript",
-        "description": "Primary implementation language for the feature"
-      },
-      {
-        "id": "require_architecture_review",
-        "type": "boolean",
-        "required": false,
-        "default": true,
-        "description": "Whether an architecture review step is included"
-      }
-    ],
+    "description": "A project type that turns a brief into an approved PRD and a wireframe using AI work plus human feedback and review.",
+    "parameters": [],
     "roles": [
       {
         "id": "human_owner",
         "kind": "human",
-        "description": "Human project owner who provides direction, reviews outputs, and approves deliverables.",
-        "default_prompt": "You are the project owner. Provide clear direction and apply sound judgment when reviewing outputs.",
-        "allowed_task_types": ["provide_brief", "review_prd", "review_architecture", "review_code"]
+        "description": "Human owner who provides the initial brief, gives feedback, and approves outputs.",
+        "default_prompt": "You are the project owner. Provide concrete direction and apply judgment when giving feedback or approval."
       },
       {
-        "id": "prd_agent",
+        "id": "product_agent",
         "kind": "agent",
-        "description": "AI agent that drafts product requirements documents from a brief.",
-        "default_prompt": "You are a senior product manager. Produce a clear, complete, and actionable PRD based on the provided brief.",
-        "allowed_task_types": ["draft_prd", "revise_prd"]
+        "description": "Agent that drafts and revises product requirements.",
+        "default_prompt": "You are a senior product manager. Produce clear, actionable product requirements."
       },
       {
-        "id": "architect_agent",
+        "id": "design_agent",
         "kind": "agent",
-        "description": "AI agent that produces architecture documents from approved PRDs.",
-        "default_prompt": "You are a senior software architect. Produce a pragmatic, well-reasoned architecture document covering components, interfaces, data flow, and key tradeoffs.",
-        "allowed_task_types": ["design_architecture", "revise_architecture"]
-      },
-      {
-        "id": "coding_agent",
-        "kind": "agent",
-        "description": "AI agent that implements code from approved architecture documents.",
-        "default_prompt": "You are a senior software engineer. Produce clean, maintainable, correct, and well-tested code according to the architecture document.",
-        "allowed_task_types": ["implement_code", "revise_code"]
+        "description": "Agent that turns approved requirements into wireframes.",
+        "default_prompt": "You are a senior product designer. Produce low-fidelity wireframes that match the approved requirements."
       }
     ],
-    "artifact_types": [
+    "artifacts": [
       {
-        "id": "brief_doc",
-        "description": "Initial project brief provided by the human owner",
+        "id": "brief.md",
+        "description": "Initial project brief shared across the project type",
         "content_kind": "markdown"
-      },
-      {
-        "id": "prd_doc",
-        "description": "Product requirements document",
-        "content_kind": "markdown"
-      },
-      {
-        "id": "architecture_doc",
-        "description": "System architecture design document",
-        "content_kind": "markdown"
-      },
-      {
-        "id": "code_bundle",
-        "description": "Implemented code files for the feature",
-        "content_kind": "bundle"
-      },
-      {
-        "id": "review_feedback",
-        "description": "Structured review feedback from a review node",
-        "content_kind": "text"
-      }
-    ],
-    "task_types": [
-      {
-        "id": "provide_brief",
-        "description": "Human owner provides the initial project brief",
-        "allowed_roles": ["human_owner"],
-        "inputs": [],
-        "outputs": [
-          { "name": "brief", "artifact_type": "brief_doc" }
-        ],
-        "default_prompt": "Provide a clear project brief describing the goal, scope, constraints, and success criteria."
-      },
-      {
-        "id": "draft_prd",
-        "description": "Draft a product requirements document from the project brief",
-        "allowed_roles": ["prd_agent"],
-        "inputs": [
-          { "name": "brief", "artifact_type": "brief_doc", "required": true }
-        ],
-        "outputs": [
-          { "name": "prd", "artifact_type": "prd_doc" }
-        ],
-        "default_prompt": "Produce a complete PRD covering goals, user stories, functional requirements, non-functional requirements, and out-of-scope items."
-      },
-      {
-        "id": "review_prd",
-        "description": "Review the drafted PRD and approve or request revisions",
-        "allowed_roles": ["human_owner"],
-        "inputs": [
-          { "name": "prd", "artifact_type": "prd_doc", "required": true }
-        ],
-        "outputs": [
-          { "name": "feedback", "artifact_type": "review_feedback" }
-        ],
-        "default_prompt": "Review the PRD for completeness, clarity, and correctness. Approve if satisfactory, or request revisions with specific feedback."
-      },
-      {
-        "id": "revise_prd",
-        "description": "Revise the PRD based on review feedback",
-        "allowed_roles": ["prd_agent"],
-        "inputs": [
-          { "name": "prd", "artifact_type": "prd_doc", "required": true },
-          { "name": "feedback", "artifact_type": "review_feedback", "required": true }
-        ],
-        "outputs": [
-          { "name": "prd", "artifact_type": "prd_doc" }
-        ],
-        "default_prompt": "Revise the PRD based on the review feedback. Address all requested changes precisely."
-      },
-      {
-        "id": "design_architecture",
-        "description": "Produce an architecture document from an approved PRD",
-        "allowed_roles": ["architect_agent"],
-        "inputs": [
-          { "name": "prd", "artifact_type": "prd_doc", "required": true }
-        ],
-        "outputs": [
-          { "name": "architecture", "artifact_type": "architecture_doc" }
-        ],
-        "default_prompt": "Produce a pragmatic architecture document covering key components, their interfaces, data flow, storage strategy, and major design tradeoffs."
-      },
-      {
-        "id": "review_architecture",
-        "description": "Review the architecture document and approve or request revisions",
-        "allowed_roles": ["human_owner"],
-        "inputs": [
-          { "name": "architecture", "artifact_type": "architecture_doc", "required": true }
-        ],
-        "outputs": [
-          { "name": "feedback", "artifact_type": "review_feedback" }
-        ],
-        "default_prompt": "Review the architecture for soundness, practicality, and alignment with the PRD. Approve if satisfactory, or request revisions."
-      },
-      {
-        "id": "revise_architecture",
-        "description": "Revise the architecture document based on review feedback",
-        "allowed_roles": ["architect_agent"],
-        "inputs": [
-          { "name": "architecture", "artifact_type": "architecture_doc", "required": true },
-          { "name": "feedback", "artifact_type": "review_feedback", "required": true }
-        ],
-        "outputs": [
-          { "name": "architecture", "artifact_type": "architecture_doc" }
-        ],
-        "default_prompt": "Revise the architecture based on the review feedback. Address all requested changes precisely."
-      },
-      {
-        "id": "implement_code",
-        "description": "Implement the feature code from the approved architecture",
-        "allowed_roles": ["coding_agent"],
-        "inputs": [
-          { "name": "architecture", "artifact_type": "architecture_doc", "required": true }
-        ],
-        "outputs": [
-          { "name": "code", "artifact_type": "code_bundle" }
-        ],
-        "default_prompt": "Implement the feature according to the architecture document. Write clean, maintainable, well-tested code."
-      },
-      {
-        "id": "review_code",
-        "description": "Review the implemented code and approve or request revisions",
-        "allowed_roles": ["human_owner"],
-        "inputs": [
-          { "name": "code", "artifact_type": "code_bundle", "required": true }
-        ],
-        "outputs": [
-          { "name": "feedback", "artifact_type": "review_feedback" }
-        ],
-        "default_prompt": "Review the code for correctness, quality, and alignment with the architecture. Approve if satisfactory, or request revisions."
-      },
-      {
-        "id": "revise_code",
-        "description": "Revise the code based on review feedback",
-        "allowed_roles": ["coding_agent"],
-        "inputs": [
-          { "name": "code", "artifact_type": "code_bundle", "required": true },
-          { "name": "feedback", "artifact_type": "review_feedback", "required": true }
-        ],
-        "outputs": [
-          { "name": "code", "artifact_type": "code_bundle" }
-        ],
-        "default_prompt": "Revise the code based on the review feedback. Address all requested changes precisely."
       }
     ],
     "workflow_types": [
       {
-        "id": "feature_delivery_flow",
-        "description": "End-to-end workflow for delivering a software feature with PRD, architecture, and code review gates",
+        "id": "discovery_flow",
+        "description": "Capture a brief, iterate on a PRD with feedback, approve it, and create a wireframe.",
+        "artifacts": [
+          {
+            "id": "prd.md",
+            "description": "Workflow-local product requirements document",
+            "content_kind": "markdown"
+          },
+          {
+            "id": "prd-feedback.md",
+            "description": "Workflow-local feedback captured from feedback or review nodes",
+            "content_kind": "markdown"
+          },
+          {
+            "id": "wireframe.png",
+            "description": "Approved wireframe output for the workflow",
+            "content_kind": "image"
+          }
+        ],
         "nodes": [
           {
-            "id": "provide_brief_node",
+            "id": "provide_brief",
             "kind": "input",
-            "task_type": "provide_brief",
+            "title": "Provide Brief",
+            "description": "Capture the initial brief for the project.",
             "role": "human_owner",
-            "title": "Provide Project Brief"
+            "prompt": "Write a concise brief covering the problem, target users, constraints, and success criteria.",
+            "reads": [],
+            "writes": ["brief.md"]
           },
           {
-            "id": "draft_prd_node",
+            "id": "draft_prd",
             "kind": "work",
-            "task_type": "draft_prd",
-            "role": "prd_agent",
             "title": "Draft PRD",
-            "sprint_eligible": true
+            "description": "Produce the first PRD draft from the brief.",
+            "role": "product_agent",
+            "prompt": "Turn the brief into a PRD with scope, requirements, and acceptance criteria.",
+            "reads": ["brief.md"],
+            "writes": ["prd.md"]
           },
           {
-            "id": "review_prd_node",
-            "kind": "review",
-            "task_type": "review_prd",
+            "id": "collect_feedback",
+            "kind": "feedback",
+            "title": "Collect Human Feedback",
+            "description": "Capture human commentary on the drafted PRD before formal approval.",
             "role": "human_owner",
-            "title": "Review PRD"
+            "prompt": "Provide concrete feedback on what should change in the PRD before approval.",
+            "reads": ["prd.md"],
+            "writes": ["prd-feedback.md"]
           },
           {
-            "id": "design_architecture_node",
+            "id": "revise_prd",
             "kind": "work",
-            "task_type": "design_architecture",
-            "role": "architect_agent",
-            "title": "Design Architecture",
-            "sprint_eligible": true
+            "title": "Revise PRD",
+            "description": "Revise the PRD using the collected human feedback.",
+            "role": "product_agent",
+            "prompt": "Update the PRD so that it fully addresses the human feedback while preserving clear scope and requirements.",
+            "reads": ["prd.md", "prd-feedback.md"],
+            "writes": ["prd.md"]
           },
           {
-            "id": "review_architecture_node",
+            "id": "approve_prd",
             "kind": "review",
-            "task_type": "review_architecture",
+            "title": "Approve PRD",
+            "description": "Approve the revised PRD or send it back for another revision.",
             "role": "human_owner",
-            "title": "Review Architecture"
+            "prompt": "Approve only when the PRD is ready to drive design work; otherwise request revision with concrete guidance.",
+            "reads": ["prd.md"],
+            "writes": ["prd-feedback.md"]
           },
           {
-            "id": "implement_code_node",
+            "id": "create_wireframe",
             "kind": "work",
-            "task_type": "implement_code",
-            "role": "coding_agent",
-            "title": "Implement Code",
-            "sprint_eligible": true
+            "title": "Create Wireframe",
+            "description": "Create a wireframe from the approved PRD.",
+            "role": "design_agent",
+            "prompt": "Produce a low-fidelity wireframe that reflects the approved PRD.",
+            "artifacts": [
+              {
+                "id": "wireframe-preview.png",
+                "description": "Node-local preview image kept only for this node",
+                "content_kind": "image"
+              }
+            ],
+            "reads": ["prd.md"],
+            "writes": ["wireframe.png", "wireframe-preview.png"]
           },
           {
-            "id": "review_code_node",
-            "kind": "review",
-            "task_type": "review_code",
-            "role": "human_owner",
-            "title": "Review Code"
-          },
-          {
-            "id": "end_node",
+            "id": "finish",
             "kind": "end",
-            "title": "Feature Delivered"
+            "title": "Discovery Complete"
           }
         ],
         "edges": [
           {
-            "from": "provide_brief_node",
-            "to": "draft_prd_node",
-            "on": "completed",
-            "artifact_map": [
-              { "from_output": "brief", "to_input": "brief" }
-            ]
+            "from": "provide_brief",
+            "to": "draft_prd",
+            "on": "completed"
           },
           {
-            "from": "draft_prd_node",
-            "to": "review_prd_node",
-            "on": "completed",
-            "artifact_map": [
-              { "from_output": "prd", "to_input": "prd" }
-            ]
+            "from": "draft_prd",
+            "to": "collect_feedback",
+            "on": "completed"
           },
           {
-            "from": "review_prd_node",
-            "to": "design_architecture_node",
-            "on": "approved",
-            "artifact_map": [
-              { "from_input": "prd", "to_input": "prd" }
-            ]
+            "from": "collect_feedback",
+            "to": "revise_prd",
+            "on": "completed"
           },
           {
-            "from": "review_prd_node",
-            "to": "draft_prd_node",
-            "on": "revise",
-            "artifact_map": [
-              { "from_input": "prd", "to_input": "prd" },
-              { "from_output": "feedback", "to_input": "feedback" }
-            ]
+            "from": "revise_prd",
+            "to": "approve_prd",
+            "on": "completed"
           },
           {
-            "from": "design_architecture_node",
-            "to": "review_architecture_node",
-            "on": "completed",
-            "artifact_map": [
-              { "from_output": "architecture", "to_input": "architecture" }
-            ]
+            "from": "approve_prd",
+            "to": "create_wireframe",
+            "on": "approved"
           },
           {
-            "from": "review_architecture_node",
-            "to": "implement_code_node",
-            "on": "approved",
-            "artifact_map": [
-              { "from_input": "architecture", "to_input": "architecture" }
-            ]
+            "from": "approve_prd",
+            "to": "revise_prd",
+            "on": "revise"
           },
           {
-            "from": "review_architecture_node",
-            "to": "design_architecture_node",
-            "on": "revise",
-            "artifact_map": [
-              { "from_input": "architecture", "to_input": "architecture" },
-              { "from_output": "feedback", "to_input": "feedback" }
-            ]
-          },
-          {
-            "from": "implement_code_node",
-            "to": "review_code_node",
-            "on": "completed",
-            "artifact_map": [
-              { "from_output": "code", "to_input": "code" }
-            ]
-          },
-          {
-            "from": "review_code_node",
-            "to": "end_node",
-            "on": "approved",
-            "artifact_map": []
-          },
-          {
-            "from": "review_code_node",
-            "to": "implement_code_node",
-            "on": "revise",
-            "artifact_map": [
-              { "from_input": "code", "to_input": "code" },
-              { "from_output": "feedback", "to_input": "feedback" }
-            ]
+            "from": "create_wireframe",
+            "to": "finish",
+            "on": "completed"
           }
         ]
       }

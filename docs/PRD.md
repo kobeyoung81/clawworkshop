@@ -3,167 +3,137 @@
 
 ## 1. Overview
 
-This document defines the product requirements for an AI Agent Workflow Orchestration Platform. The platform enables teams to define reusable project types composed of roles, tasks, artifacts, and workflows, and to instantiate and run those projects using a combination of human actors and remote AI agents.
+This product defines a minimal platform for authoring reusable AI-assisted project types and executing them as workflow-driven projects. A project type describes roles, concrete artifact definitions, workflows, and executable nodes using a JSON DSL backed by JSON Schema.
 
----
+The current DSL model is intentionally compact:
+
+- nodes and tasks are merged into one concept
+- artifacts are concrete named deliverables such as `prd.md`, not artifact types
+- artifact definitions are scoped to project, workflow, or node
+- nodes reference artifacts directly by id through `reads` and `writes`
+- execution flow is encoded in the graph rather than a separate execution-mode setting
 
 ## 2. Problem Statement
 
-Building software products with AI agents today requires manually wiring together agents, prompts, tools, and review cycles. There is no standard way to:
+Teams building with AI agents still hand-wire prompts, review steps, and artifact flow on a per-project basis. That makes projects hard to repeat, validate, and govern.
 
-- define the shape of a collaborative AI-assisted project
-- describe reusable roles, task contracts, and artifact flows
-- orchestrate multi-agent workflows with explicit review gates
-- allow human oversight and intervention at defined points
+The platform should provide a reusable structure for:
 
-This platform addresses all of the above.
-
----
+- defining who participates in a project
+- defining which concrete artifacts exist in that project type
+- expressing the workflow graph, including human review and human feedback
+- validating project type files before they are used at runtime
 
 ## 3. Goals
 
-- Define a minimal, reusable DSL for describing AI agent project types
-- Enable instantiation and execution of projects from project type definitions
-- Support both human and AI actors in the same workflow
-- Provide explicit review and revision loops
-- Enable both automatic and manual sprint execution modes
-- Keep the core platform simple and extensible
-
----
+- Define a minimal, machine-readable DSL for reusable project types
+- Support both human and AI roles in the same workflow
+- Model executable work directly as workflow nodes
+- Define concrete artifacts once in the schema and keep their runtime content in the project instance
+- Support artifact definitions at project, workflow, and node scope
+- Let nodes read and write artifacts directly by artifact id
+- Represent human approval and human feedback as first-class workflow constructs
+- Keep the schema and example aligned with the design docs
 
 ## 4. Non-Goals (v1)
 
-- Real-time collaboration features
 - Billing and cost management
-- Advanced retry and escalation policies
-- Agent marketplace or discovery
-- Multi-tenant access control beyond basic role assignment
+- Real-time collaboration features
 - Dynamic task generation at runtime
-
----
+- Embedded scripting or rule engines
+- Multi-tenant access control beyond basic role assignment
+- Advanced retry, escalation, or scheduling policies
 
 ## 5. Core Concepts
 
 ### 5.1 Project Type
 
-A project type is a reusable template that defines the complete structure of a class of projects. It contains roles, artifact types, task types, and workflow types. It is defined using the minimal DSL described in the accompanying design document.
+A project type is a reusable template for a class of projects. It defines:
+
+- roles
+- project-scoped artifacts
+- workflow types
+- optional parameters
 
 ### 5.2 Project Instance
 
-A project instance is a live instantiation of a project type. It is created by the platform when a user starts a new project from a project type. The instance holds runtime state, actual actor assignments, and artifact content.
+A project instance is the runtime realization of a project type. It stores the actual artifact contents for the concrete artifacts declared by the project type and its workflows.
 
-### 5.3 Roles
+### 5.3 Workflow Type
 
-Roles are abstract participant categories defined in the project type. Examples include `human_owner`, `coding_agent`, and `review_agent`. Roles are not concrete runtime actors.
+A workflow type is a directed graph of executable nodes and edges. It may also define workflow-scoped artifacts that are visible only within that workflow.
 
-### 5.4 Artifact Types
+### 5.4 Artifact
 
-Artifact types define the categories of inputs and outputs that flow between tasks. Examples include `prd_doc`, `architecture_doc`, `code_bundle`, and `review_feedback`.
+An artifact is a concrete deliverable declared in the schema, such as `brief.md`, `prd.md`, `prd-feedback.md`, or `wireframe.png`.
 
-### 5.5 Task Types
+- the schema declares that the artifact may exist
+- the project instance stores the actual content for that artifact
 
-Task types define reusable work contracts. Each task type specifies which roles can perform it, what artifacts it consumes and produces, and what the default prompt is.
+Artifacts may be defined at exactly one scope:
 
-### 5.6 Workflow Types
+- **project**: reusable across workflows
+- **workflow**: reusable inside one workflow
+- **node**: local to one node
 
-Workflow types define a directed graph of nodes and edges. Nodes reference task types and roles. Edges define graph transitions triggered by node outcomes.
+### 5.5 Node
 
-### 5.7 Sprint
+A node is the unit of authored work in the DSL. It combines the former task contract and workflow placement into a single object. A non-terminal node defines:
 
-A sprint is a runtime execution unit. Sprints can be triggered automatically (in auto mode) or manually (in manual mode). In auto mode, an assigned agent starts a sprint automatically when a work node becomes ready. In manual mode, a human selects one or more ready work nodes suitable for a role and triggers a sprint that executes all selected nodes in a single run.
+- the role responsible for the node
+- the prompt or instructions for that node
+- which artifacts it reads
+- which artifacts it writes
+- optional node-scoped artifact declarations
 
----
+### 5.6 Review Node
 
-## 6. Execution Modes
+A `review` node captures an approval decision. Its important outcomes are `approved` and `revise`.
 
-The platform supports two execution modes for project instances.
+### 5.7 Feedback Node
 
-### 6.1 Auto Mode
+A `feedback` node captures human commentary without serving as the formal approval gate. It is used when the workflow needs human direction, clarification, or revision notes but not a yes/no decision.
 
-In auto mode, nodes become ready according to the workflow graph and are automatically assigned to compatible actors. The assigned actor starts execution immediately without waiting for human approval.
+## 6. Execution Model
 
-This mode is suitable for fully automated pipelines where human intervention is limited to review gates.
+The workflow graph drives execution.
 
-### 6.2 Manual Mode
+- nodes become ready when required upstream conditions are satisfied and the artifacts in `reads` are available
+- nodes may create or update the artifacts listed in `writes`
+- edges route control by outcome
+- human approval is modeled through `review` nodes
+- human commentary is modeled through `feedback` nodes
 
-In manual mode, a human actor explicitly initiates execution for one or more ready work nodes. The human selects all or a subset of ready work nodes assigned to a specific role, and triggers a sprint that executes all selected nodes in one run.
+The DSL does **not** define an `execution_mode` such as auto or manual. The graph already expresses when work proceeds directly and when human participation is required.
 
-This mode provides maximum human control over the pacing and scope of agent work.
+## 7. Product Requirements
 
----
+The platform must:
 
-## 7. Node States (Runtime)
+1. Accept project type definitions as JSON documents
+2. Validate structure with JSON Schema before runtime registration
+3. Support role definitions for both human and AI actors
+4. Support project-, workflow-, and node-scoped artifact declarations
+5. Restrict artifact `content_kind` to `markdown` and `image`
+6. Support node kinds `input`, `work`, `review`, `feedback`, and `end`
+7. Support direct artifact-id references from nodes through `reads` and `writes`
+8. Keep edges focused on control-flow outcomes rather than artifact port mapping
+9. Allow prompt composition from role defaults and node-specific instructions
 
-Each workflow node instance goes through the following runtime states:
-
-| State | Description |
-|---|---|
-| `waiting` | Not yet ready; upstream dependencies are not satisfied |
-| `claimable` | Ready for execution; actor has not yet started |
-| `in_progress` | Actor is actively working |
-| `pending_review` | Work complete; awaiting review |
-| `approved` | Review passed |
-| `revising` | Sent back for revision |
-| `completed` | Terminal success state |
-
----
-
-## 8. Workflow Engine Requirements
-
-The workflow engine must implement these behaviors:
-
-1. Activate nodes when all required upstream dependencies are satisfied
-2. Assign nodes to actors compatible with the node's role
-3. Respect execution mode (auto vs manual) when starting nodes
-4. Collect outputs and emit outcome values on completion
-5. Select outgoing edges based on emitted outcome
-6. Support sprint grouping in manual mode
-
----
-
-## 9. Review and Revision Flow
-
-Review nodes produce two outcomes: `approved` and `revise`.
-
-- When `approved`, the workflow follows the edge leading forward
-- When `revise`, the workflow follows the edge leading back to the target work node
-
-This creates an explicit revision loop without requiring a separate policy construct.
-
----
-
-## 10. Prompt Layering
-
-The final prompt for a node is composed in this order:
-
-1. Role `default_prompt`
-2. Task type `default_prompt`
-3. Node `prompt_override`
-
-Later layers override earlier layers. This allows general role guidance to be refined by task-specific instructions and further adjusted per node if needed.
-
----
-
-## 11. Success Criteria
+## 8. Success Criteria
 
 | Criterion | Measure |
 |---|---|
-| Project type DSL is machine-readable | JSON Schema validation passes |
-| Example project type is structurally valid | Validates against schema without errors |
-| Workflow graph is executable | Engine can traverse nodes and edges |
-| Sprint mode is configurable | Auto and manual modes are supported |
-| Review loops are explicit | Graph structure encodes review-revision cycles |
+| DSL is machine-readable | Project type files validate against JSON Schema |
+| Example is trustworthy | Example JSON validates against the schema |
+| Docs are aligned | README, PRD, design doc, schema, and example describe the same model |
+| Human oversight is explicit | Review and feedback are both modeled in the graph |
+| Artifact identity is concrete | Example artifacts are modeled as concrete ids such as `prd.md`, not abstract types |
 
----
+## 9. Out of Scope for v1
 
-## 12. Appendix: Out-of-Scope Features for v1
-
-- Retry policy blocks
-- Budget and cost tracking
-- Escalation rules
-- Multi-review quorum voting
-- Dynamic task creation at runtime
-- Embedded scripting or conditional expressions
-- Agent marketplace
-
-These may be considered for later versions if proven necessary.
+- Runtime budgeting
+- Task marketplaces
+- Automatic retries and fallback policies
+- Visual workflow editing
+- Runtime policy languages

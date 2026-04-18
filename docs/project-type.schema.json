@@ -13,10 +13,6 @@
       "type": "string",
       "minLength": 1
     },
-    "nonEmptyString": {
-      "type": "string",
-      "minLength": 1
-    },
     "parameter": {
       "type": "object",
       "additionalProperties": false,
@@ -35,7 +31,7 @@
     "role": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "kind", "description", "default_prompt", "allowed_task_types"],
+      "required": ["id", "kind", "description", "default_prompt"],
       "properties": {
         "id": { "$ref": "#/$defs/identifier" },
         "kind": {
@@ -43,14 +39,10 @@
           "enum": ["human", "agent"]
         },
         "description": { "type": "string" },
-        "default_prompt": { "type": "string" },
-        "allowed_task_types": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/identifier" }
-        }
+        "default_prompt": { "type": "string" }
       }
     },
-    "artifactType": {
+    "artifact": {
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "description", "content_kind"],
@@ -59,51 +51,14 @@
         "description": { "type": "string" },
         "content_kind": {
           "type": "string",
-          "enum": ["markdown", "text", "json", "code", "bundle"]
+          "enum": ["markdown", "image"]
         },
         "schema_hint": { "type": "string" }
       }
     },
-    "taskInput": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["name", "artifact_type", "required"],
-      "properties": {
-        "name": { "$ref": "#/$defs/identifier" },
-        "artifact_type": { "$ref": "#/$defs/identifier" },
-        "required": { "type": "boolean" }
-      }
-    },
-    "taskOutput": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["name", "artifact_type"],
-      "properties": {
-        "name": { "$ref": "#/$defs/identifier" },
-        "artifact_type": { "$ref": "#/$defs/identifier" }
-      }
-    },
-    "taskType": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["id", "description", "allowed_roles", "inputs", "outputs", "default_prompt"],
-      "properties": {
-        "id": { "$ref": "#/$defs/identifier" },
-        "description": { "type": "string" },
-        "allowed_roles": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/identifier" }
-        },
-        "inputs": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/taskInput" }
-        },
-        "outputs": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/taskOutput" }
-        },
-        "default_prompt": { "type": "string" }
-      }
+    "artifactRefs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/identifier" }
     },
     "node": {
       "type": "object",
@@ -113,13 +68,18 @@
         "id": { "$ref": "#/$defs/identifier" },
         "kind": {
           "type": "string",
-          "enum": ["input", "work", "review", "end"]
+          "enum": ["input", "work", "review", "feedback", "end"]
         },
         "title": { "type": "string" },
-        "task_type": { "$ref": "#/$defs/identifier" },
+        "description": { "type": "string" },
         "role": { "$ref": "#/$defs/identifier" },
-        "prompt_override": { "type": "string" },
-        "sprint_eligible": { "type": "boolean" }
+        "prompt": { "type": "string" },
+        "reads": { "$ref": "#/$defs/artifactRefs" },
+        "writes": { "$ref": "#/$defs/artifactRefs" },
+        "artifacts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/artifact" }
+        }
       },
       "allOf": [
         {
@@ -130,48 +90,31 @@
           "then": {
             "not": {
               "anyOf": [
-                { "required": ["task_type"] },
-                { "required": ["role"] }
+                { "required": ["description"] },
+                { "required": ["role"] },
+                { "required": ["prompt"] },
+                { "required": ["reads"] },
+                { "required": ["writes"] },
+                { "required": ["artifacts"] }
               ]
             }
           },
           "else": {
-            "required": ["task_type", "role"]
+            "required": ["description", "role", "reads", "writes"]
           }
-        }
-      ]
-    },
-    "artifactMap": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["to_input"],
-      "properties": {
-        "from_output": { "$ref": "#/$defs/identifier" },
-        "from_input": { "$ref": "#/$defs/identifier" },
-        "to_input": { "$ref": "#/$defs/identifier" }
-      },
-      "oneOf": [
-        {
-          "required": ["from_output"],
-          "not": { "required": ["from_input"] }
-        },
-        {
-          "required": ["from_input"],
-          "not": { "required": ["from_output"] }
         }
       ]
     },
     "edge": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["from", "to", "on", "artifact_map"],
+      "required": ["from", "to", "on"],
       "properties": {
         "from": { "$ref": "#/$defs/identifier" },
         "to": { "$ref": "#/$defs/identifier" },
-        "on": { "$ref": "#/$defs/nonEmptyString" },
-        "artifact_map": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/artifactMap" }
+        "on": {
+          "type": "string",
+          "minLength": 1
         }
       }
     },
@@ -182,6 +125,10 @@
       "properties": {
         "id": { "$ref": "#/$defs/identifier" },
         "description": { "type": "string" },
+        "artifacts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/artifact" }
+        },
         "nodes": {
           "type": "array",
           "items": { "$ref": "#/$defs/node" }
@@ -202,8 +149,7 @@
         "description",
         "parameters",
         "roles",
-        "artifact_types",
-        "task_types",
+        "artifacts",
         "workflow_types"
       ],
       "properties": {
@@ -211,11 +157,6 @@
         "name": { "type": "string" },
         "version": { "type": "string" },
         "description": { "type": "string" },
-        "execution_mode": {
-          "type": "string",
-          "enum": ["auto", "manual"],
-          "default": "auto"
-        },
         "parameters": {
           "type": "array",
           "items": { "$ref": "#/$defs/parameter" }
@@ -224,13 +165,9 @@
           "type": "array",
           "items": { "$ref": "#/$defs/role" }
         },
-        "artifact_types": {
+        "artifacts": {
           "type": "array",
-          "items": { "$ref": "#/$defs/artifactType" }
-        },
-        "task_types": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/taskType" }
+          "items": { "$ref": "#/$defs/artifact" }
         },
         "workflow_types": {
           "type": "array",
