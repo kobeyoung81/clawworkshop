@@ -4,7 +4,7 @@ Documentation workspace for a minimal JSON DSL used to describe AI-assisted proj
 
 ## Current DSL shape
 
-- **Merged node/task model**: workflows contain executable nodes directly; there is no separate `task_types` layer.
+- **Node-centric authoring model**: workflows contain executable nodes directly; there is no separate `task_types` layer.
 - **Concrete artifacts**: the schema declares concrete artifacts such as `brief.md`, `prd.md`, or `wireframe.png`, not reusable artifact types.
 - **Scoped artifacts**: artifacts may be declared at **project**, **workflow**, or **node** scope, and each artifact is defined in exactly one scope.
 - **Direct artifact references**: `input` and `work` nodes declare `reads` and `writes` using artifact ids directly, with no named input/output ports and no `artifact_map`.
@@ -24,6 +24,7 @@ Documentation workspace for a minimal JSON DSL used to describe AI-assisted proj
 
 ## Design highlights
 
+- Use **workflow** and **node** for authored DSL structures, and reserve **flow** and **task** for runtime concepts in the application design.
 - Use **project-scoped artifacts** for deliverables shared across workflows.
 - Use **workflow-scoped artifacts** for files shared inside one workflow.
 - Use **node-scoped artifacts** for local artifacts owned by a single node.

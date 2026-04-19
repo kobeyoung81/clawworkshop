@@ -6,11 +6,13 @@ This document defines a minimal JSON-based DSL for describing reusable AI-assist
 
 The DSL describes the **authoring layer only**. It does not encode runtime state, execution logs, or live actor assignments. Runtime artifact contents live in the project instance, not in the project type definition.
 
+In this document, **workflow** and **node** are authored DSL concepts. The runtime application may refer to executed workflow instances as **flows** and executed node instances as **tasks**, but those runtime terms are out of scope for the DSL itself.
+
 ## 2. Design Principles
 
 ### 2.1 Node-centric authoring
 
-The DSL uses a merged node/task model. Workflow nodes directly define the work contract, so there is no separate `task_types` layer.
+Workflow nodes directly define the authored work contract, so there is no separate `task_types` layer.
 
 ### 2.2 Concrete artifacts
 
@@ -51,8 +53,8 @@ The model must support both human and AI roles without giving either side a spec
 ### 3.2 Out of scope
 
 - runtime project instances
-- workflow run state
-- task execution logs
+- runtime flow state
+- runtime task state and execution logs
 - actor scheduling policies
 - retry, escalation, or budget rules
 - embedded scripting
@@ -266,7 +268,7 @@ An array of artifact ids the node may create or update while it runs.
 
 The arrays contain artifact ids directly, not named ports. A node that revises `prd.md` can list `prd.md` in both `reads` and `writes`.
 
-`writes` is part of the normal artifact flow for `input` and `work` nodes only.
+`writes` is part of the normal artifact update path for `input` and `work` nodes only.
 
 #### Supported node kinds
 

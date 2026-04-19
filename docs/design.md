@@ -52,8 +52,20 @@ This design adds the missing system layers around that DSL:
 - workspace and membership model
 - project type lifecycle and versioning
 - runtime project instances
-- workflow execution state
+- runtime flow and task state
 - collaboration, audit, and delivery UI
+
+### 2.4 Terminology conventions
+
+This document uses the following names consistently:
+
+- **project type**: reusable DSL package containing workflows, roles, and artifact definitions
+- **workflow**: reusable authored graph inside a project type
+- **flow**: one runtime instance of a workflow inside a project
+- **node**: authored step inside a workflow definition
+- **task**: runtime work item created from a node inside a flow
+
+The design deliberately avoids using **run** as the canonical runtime term. Runtime language should prefer **flow** and **task**, while authored DSL language should prefer **workflow** and **node**.
 
 ---
 
@@ -66,7 +78,7 @@ This design adds the missing system layers around that DSL:
 3. Support both **human** and **agent** participants inside the same workspace and workflow model.
 4. Make workflow behavior explicit through authored nodes, edges, artifacts, review, and feedback.
 5. Keep authoring data and runtime execution data separate but traceable.
-6. Provide clear auditability for who changed what, who approved what, and which template version powered a run.
+6. Provide clear auditability for who changed what, who approved what, and which template version powered a flow.
 
 ### 3.2 Non-Goals
 
@@ -92,7 +104,7 @@ ClawWorkshop should feel like a sibling of ClawArena, not a disconnected product
 
 ### 4.2 Definitions are immutable once published
 
-Published project type versions must be immutable. Runtime projects and runs should reference a stable snapshot so later template edits cannot silently change historical behavior.
+Published project type versions must be immutable. Runtime projects and flows should reference a stable snapshot so later template edits cannot silently change historical behavior.
 
 ### 4.3 Human oversight is explicit
 
@@ -244,7 +256,7 @@ Core rules:
 
 1. Every project belongs to one workspace.
 2. Workspaces contain both human members and invited agents.
-3. Permissions are enforced first at workspace scope, then at project/run scope.
+3. Permissions are enforced first at workspace scope, then at project/flow scope.
 4. Agents are members of workspaces but can only act where explicitly assigned or allowed by policy.
 
 ### 7.4 Recommended workspace roles
@@ -253,7 +265,7 @@ Core rules:
 |---|---|---|
 | `owner` | human | Full workspace control, billing/settings later, membership/admin |
 | `admin` | human | Manage workspace settings, members, agents, templates, projects |
-| `manager` | human | Create projects, instantiate templates, manage runs and assignments |
+| `manager` | human | Create projects, instantiate templates, manage flows and assignments |
 | `contributor` | human | Edit templates/projects/artifacts where permitted |
 | `reviewer` | human | Participate in review/feedback nodes, comment, approve |
 | `viewer` | human | Read-only access |
@@ -261,14 +273,14 @@ Core rules:
 
 ### 7.5 Project-level overrides
 
-Project-level and run-level roles may narrow access further:
+Project-level and flow-level roles may narrow access further:
 
 - project maintainers
 - project reviewers
 - assigned agents
 - observers
 
-Workspace role grants access to the container; project/run assignment grants access to sensitive execution details.
+Workspace role grants access to the container; project/flow assignment grants access to sensitive execution details.
 
 ---
 
@@ -291,56 +303,107 @@ The authoring surface manages reusable definitions:
 The runtime surface manages instances:
 
 - projects created from published project type versions
-- workflow runs instantiated from those definitions
+- flows instantiated from those workflow definitions
 - assignments, artifacts, comments, review sessions, events
 
 ### 8.3 Bridge between surfaces
 
 The key system bridge is:
 
-**published project type version -> project instance -> workflow run snapshot**
+**published project type version -> project instance -> flow snapshot**
 
 Rules:
 
 1. A project type version is immutable once published.
 2. A project instance stores which published version it was created from.
-3. A run stores a normalized snapshot of the relevant workflow definition so runtime remains stable even if newer template versions are published later.
+3. A flow stores a normalized snapshot of the relevant workflow definition so runtime remains stable even if newer template versions are published later.
 
 ---
 
 ## 9. Domain Model
 
-### 9.1 Authoring entities
+### 9.1 Modeling rules
 
-| Entity | Purpose |
-|---|---|
-| `workspace` | team container for templates, projects, members, and invited agents |
-| `workspace_member` | membership record linked to Los Claws user ID |
-| `project_type` | mutable template container owned by a workspace |
-| `project_type_version` | immutable published or reviewable version of a project type |
-| `workflow_type` | authored workflow definition within a project type version |
-| `role_definition` | reusable participant role (`human` or `agent`) |
-| `artifact_definition` | project/workflow/node-scoped artifact contract |
-| `node_definition` | authored workflow node |
-| `edge_definition` | authored control-flow edge |
-| `validation_report` | schema + semantic validation result for a draft |
+The domain model should follow four rules:
 
-### 9.2 Runtime entities
+1. **Workspace ownership is the top-level tenancy boundary.** Templates, projects, flows, artifacts, and collaboration records always resolve back to one workspace.
+2. **Published template data is immutable.** Runtime execution never points at a mutable draft.
+3. **Mutable operational rows are versioned.** Runtime control records use optimistic locking so concurrent actors cannot silently overwrite each other.
+4. **History is append-only where possible.** Artifact revisions, review decisions, feedback entries, comments, and events are new records, not destructive updates.
 
-| Entity | Purpose |
-|---|---|
-| `project` | runtime project instance created from a published project type version |
-| `workflow_run` | active or completed execution of a workflow in a project |
-| `node_run` | runtime state for one node instance |
-| `artifact_instance` | concrete project artifact content and metadata |
-| `assignment` | human or agent ownership of a node run or project role |
-| `review_session` | structured approval cycle for review nodes |
-| `feedback_session` | structured commentary cycle for feedback nodes |
-| `comment` | contextual discussion on projects, nodes, artifacts, or reviews |
-| `event` | append-only audit/event log entry |
-| `notification_cursor` | per-user read state for activity feeds |
+### 9.2 Aggregate overview
 
-### 9.3 Suggested runtime state enums
+```text
+workspace
+├── workspace_member
+├── project_type
+│   ├── validation_report
+│   └── project_type_version
+│       └── published_snapshot (JSON)
+└── project
+    ├── project_participant
+    ├── artifact_instance
+    │   └── artifact_revision
+    └── flow
+        ├── task
+        │   ├── assignment
+        │   ├── review_session
+        │   │   └── review_decision
+        │   └── feedback_session
+        │       └── feedback_entry
+        ├── comment
+        └── event
+```
+
+This tree is conceptual, not a literal ORM graph. The important design point is that authoring, runtime execution, artifacts, collaboration, and audit are separate subdomains connected by stable IDs and immutable snapshots.
+
+### 9.3 Authoring records
+
+| Record | Parent / scope | Key fields | Mutability / notes |
+|---|---|---|---|
+| `workspace` | platform | `id`, `slug`, `name`, `default_locale`, `status` | Mutable admin record; one per team or organization |
+| `workspace_member` | workspace | `workspace_id`, `subject_id`, `subject_type`, `role`, `status` | Unique per `(workspace_id, subject_id)`; links Los Claws identities into the workspace |
+| `project_type` | workspace | `id`, `workspace_id`, `key`, `title`, `description`, `status`, `current_draft_json`, `version` | Mutable template root; stores the current editable draft and metadata |
+| `validation_report` | project type draft | `id`, `project_type_id`, `draft_version`, `severity`, `report_json`, `created_by` | Append-only validation output keyed to a draft version |
+| `project_type_version` | project type | `id`, `project_type_id`, `version_no`, `published_snapshot_json`, `summary_json`, `published_by` | Immutable publication snapshot used by runtime projects |
+
+For v1, the **canonical authoring source of truth** should remain the JSON DSL document. Normalized workflow, node, role, and artifact tables may exist as query-friendly projections, but they should be treated as derived from `current_draft_json` or `published_snapshot_json`, not as separate aggregate roots with independent mutation paths.
+
+### 9.4 Runtime records
+
+| Record | Parent / scope | Key fields | Mutable fields and relationships |
+|---|---|---|---|
+| `project` | workspace | `id`, `workspace_id`, `project_type_version_id`, `name`, `status`, `parameter_values_json`, `version` | Mutable runtime container created from one published template version |
+| `project_participant` | project | `project_id`, `subject_id`, `subject_type`, `role`, `status` | Narrows workspace membership to project-specific access and responsibilities |
+| `flow` | project | `id`, `project_id`, `workflow_key`, `flow_sequence`, `status`, `blocked_reason`, `version` | One execution instance of one workflow snapshot inside a project |
+| `task` | flow | `id`, `flow_id`, `node_key`, `status`, `claim_owner_id`, `current_assignment_id`, `current_review_session_id`, `current_feedback_session_id`, `version` | Core mutable runtime row for concurrency-sensitive state transitions |
+| `assignment` | task or project | `id`, `task_id`, `assignee_id`, `assignee_type`, `source`, `status`, `version` | Tracks manager assignment, self-claim, release, and completion metadata |
+| `artifact_instance` | project | `id`, `project_id`, `artifact_key`, `scope_type`, `scope_ref`, `current_revision_no`, `version` | Stable artifact identity for a declared DSL artifact |
+| `artifact_revision` | artifact instance | `id`, `artifact_instance_id`, `revision_no`, `blob_ref`, `content_kind`, `created_by`, `base_revision_no` | Append-only artifact body/history record |
+| `review_session` | task | `id`, `task_id`, `status`, `outcome`, `requested_reviewers_json`, `resolved_at`, `version` | Mutable session header plus append-only reviewer decisions |
+| `review_decision` | review session | `id`, `review_session_id`, `reviewer_id`, `outcome`, `comment_body`, `created_at` | One reviewer decision record; unique per `(review_session_id, reviewer_id)` |
+| `feedback_session` | task | `id`, `task_id`, `status`, `summary`, `resolved_at`, `version` | Mutable session header for commentary cycles |
+| `feedback_entry` | feedback session | `id`, `feedback_session_id`, `author_id`, `body`, `created_at` | Append-only human guidance within a feedback session |
+| `comment` | polymorphic | `id`, `parent_type`, `parent_id`, `author_id`, `body`, `created_at` | Freeform discussion attached to artifacts, flows, tasks, or review objects |
+| `event` | workspace / project / flow | `id`, `seq`, `topic`, `subject_type`, `subject_id`, `subject_version`, `actor_id`, `payload_json`, `created_at` | Append-only audit and SSE feed record |
+| `notification_cursor` | actor | `actor_id`, `feed_name`, `last_seen_seq` | Read-state bookmark for activity feeds |
+
+### 9.5 Relationship and index expectations
+
+The following constraints matter enough to document explicitly:
+
+1. `workspace.slug` must be globally unique.
+2. `workspace_member` must be unique on `(workspace_id, subject_id)`.
+3. `project_type` must be unique on `(workspace_id, key)`.
+4. `project_type_version` must be unique on `(project_type_id, version_no)`.
+5. `flow` should be unique on `(project_id, workflow_key, flow_sequence)`.
+6. `task` should be unique on `(flow_id, node_key)`.
+7. `artifact_instance` should be unique on `(project_id, artifact_key)`.
+8. `artifact_revision` should be unique on `(artifact_instance_id, revision_no)`.
+9. Only one active assignment should exist for a task at a time.
+10. `event.seq` should be monotonic so clients can resume SSE streams and activity pagination safely.
+
+### 9.6 Suggested state enums
 
 #### Project type draft lifecycle
 
@@ -350,13 +413,25 @@ Rules:
 
 `draft -> active -> paused -> completed -> archived`
 
-#### Workflow run lifecycle
+#### Flow lifecycle
 
 `pending -> active -> blocked -> completed -> failed -> cancelled`
 
-#### Node run lifecycle
+#### Task lifecycle
 
-`pending -> ready -> assigned -> in_progress -> awaiting_review -> awaiting_feedback -> completed -> failed -> cancelled`
+`pending -> ready -> in_progress -> awaiting_review -> awaiting_feedback -> completed -> failed -> cancelled`
+
+#### Assignment lifecycle
+
+`proposed -> active -> released -> completed -> cancelled`
+
+#### Review session lifecycle
+
+`open -> decided -> closed`
+
+#### Feedback session lifecycle
+
+`open -> submitted -> closed`
 
 ---
 
@@ -364,20 +439,18 @@ Rules:
 
 ### 10.1 Separation of concerns
 
-Use **MySQL for metadata and control state**, and a **blob store abstraction** for artifact bodies.
+Use **MySQL for metadata, control state, and optimistic version counters**, and a **blob store abstraction** for artifact bodies.
 
 #### Store in MySQL
 
-- workspaces
-- membership
-- template metadata
-- version metadata
-- runtime project/run state
-- assignments
-- reviews
-- comments
-- event logs
-- artifact metadata and references
+- workspaces and membership
+- template metadata and publication versions
+- runtime project, flow, and task control state
+- assignments and claim metadata
+- review / feedback session headers
+- artifact metadata and current revision pointers
+- comments, events, and notification cursors
+- version counters used for compare-and-swap updates
 
 #### Store in blob storage
 
@@ -385,21 +458,57 @@ Use **MySQL for metadata and control state**, and a **blob store abstraction** f
 - uploaded images
 - exported JSON snapshots
 - large generated outputs
+- rich review attachments if added later
 
 For local development, blob storage may use the local filesystem behind the same interface. Production should target S3-compatible storage.
 
-### 10.2 Why not store all artifact content inline in MySQL
+### 10.2 Canonical JSON plus relational projections
 
-Artifact bodies can grow, branch, and be versioned independently. Metadata belongs in relational tables; binary and large text payloads are better handled by object storage semantics.
+The DSL document should remain canonical for authored workflow definitions:
 
-### 10.3 Artifact versioning
+- `project_type.current_draft_json` stores the mutable draft source
+- `project_type_version.published_snapshot_json` stores the immutable published source
 
-Each material artifact update should create a new artifact revision record:
+Relational projections of workflows, nodes, artifacts, or roles are optional but useful for:
+
+- graph rendering
+- template search/filtering
+- semantic validation queries
+- diff summaries and publish previews
+
+If projections are used, they should be regenerated from the canonical JSON rather than hand-edited through separate APIs.
+
+### 10.3 IDs, versions, and clocks
+
+Recommended conventions:
+
+1. Use **ULIDs** or another lexicographically sortable stable identifier for externally visible rows.
+2. Add `version BIGINT NOT NULL DEFAULT 0` to every mutable operational row:
+   - `project`
+   - `project_type`
+   - `flow`
+   - `task`
+   - `assignment`
+   - `artifact_instance`
+   - `review_session`
+   - `feedback_session`
+3. Use `revision_no INT` for append-only artifact revisions.
+4. Use a monotonic `seq BIGINT` on the `event` table for feeds, SSE resume tokens, and cache invalidation.
+
+### 10.4 Artifact versioning
+
+Each material artifact update should create a new `artifact_revision` and atomically advance `artifact_instance.current_revision_no`.
+
+The pair:
 
 - `artifact_instance`
 - `artifact_revision`
 
-This preserves audit history and enables review flows to target a specific revision.
+gives the system both a stable artifact identity and a full edit history. Review and feedback flows should target a specific revision number so comments and approvals stay anchored to a concrete artifact state.
+
+### 10.5 Why not store all artifact content inline in MySQL
+
+Artifact bodies can grow, branch, and be versioned independently. Metadata belongs in relational tables; binary and large text payloads are better handled by object storage semantics.
 
 ---
 
@@ -453,7 +562,7 @@ Only published versions can be instantiated into projects in v1.
 
 ---
 
-## 12. Runtime Workflow Model
+## 12. Runtime Flow Model
 
 ### 12.1 Project creation
 
@@ -470,10 +579,11 @@ Creating a project requires:
 When a workflow is started:
 
 1. resolve the published workflow definition
-2. normalize it into executable runtime state
-3. create node runs
-4. mark eligible nodes as `ready`
-5. seed required project/workflow artifacts
+2. persist a normalized workflow snapshot on the new `flow`
+3. create `task` rows with `version = 0`
+4. seed required project/workflow artifacts and initial `artifact_instance` rows
+5. mark eligible tasks as `ready`
+6. emit a `flow_started` event in the same transaction
 
 ### 12.3 Node execution behavior
 
@@ -484,7 +594,7 @@ When a workflow is started:
 
 #### `work`
 
-- may be assigned to a human or agent compatible with the node role
+- may be manager-assigned or self-claimed by a compatible human or agent
 - may read and write artifacts
 
 #### `review`
@@ -505,20 +615,62 @@ When a workflow is started:
 - terminal node
 - closes the branch or workflow
 
-### 12.4 Assignment rules
+### 12.4 Assignment and claim rules
 
-- only compatible actors may be assigned to a node
-- humans and agents both resolve through role compatibility
-- agents may be auto-assigned from workspace/project policy later, but v1 should support explicit assignment first
+1. Only compatible actors may hold an active assignment or claim for a task.
+2. **Assignment** is manager-driven ownership intent for a task. It may pre-select the expected worker before execution begins.
+3. **Claim** is the exclusive runtime reservation used when a worker actually takes the task. A claim should atomically:
+   - verify the task is still eligible for work
+   - verify no conflicting claim exists
+   - verify any pre-assignment still matches the claiming actor
+   - advance the task into `in_progress`
+   - set or activate the corresponding assignment record
+4. A claim may later be released by policy if work has not meaningfully progressed; the release should return the task to `ready` and emit an event.
+5. Claims and assignments never bypass permission checks or flow readiness checks.
 
-### 12.5 Blocking behavior
+### 12.5 Optimistic locking for workflow transitions
 
-Runs become blocked when:
+All mutable runtime records should use **optimistic locking** with compare-and-swap semantics. The common pattern is:
+
+1. client reads resource with `version`
+2. client submits mutation with `expected_version`
+3. server executes guarded update such as `WHERE id = ? AND version = ?`
+4. successful mutation increments `version`
+5. failed compare-and-swap returns a conflict response with fresh state metadata
+
+| Operation | Guard conditions | Successful effect | Conflict shape |
+|---|---|---|---|
+| Flow start | project exists, workflow is startable, `project.version == expected_version` | create `flow`, seed tasks/artifacts, increment project version if needed | `409` with current project version / active flow info |
+| Task assignment | task is `ready` or policy-permitted for reassignment, versions match | create/update active `assignment`, increment `task.version` and `assignment.version` | `409` with latest task status and assignee |
+| Task claim | task is `ready`, no conflicting claim, versions match | set `claim_owner_id`, activate assignment, move task to `in_progress`, increment version | `409` with latest claimant / task status |
+| Artifact revision write | artifact is writable from current task, `artifact_instance.version` or `current_revision_no` matches | create next `artifact_revision`, advance current revision pointer | `409` with current revision number |
+| Task completion | task is active for the current claimant, required writes are satisfied, versions match | complete task, route successors, update downstream task readiness, emit events | `409` with latest task/flow versions |
+| Review decision | review session is `open`, reviewer is eligible, session version matches | append reviewer decision, possibly resolve session and route flow | `409` with current session outcome/version |
+| Feedback close | feedback session is `open`, actor is allowed, session version matches | append feedback entry or resolve session, route flow if complete | `409` with latest feedback session state |
+| Flow completion / unblock | workflow snapshot still consistent, flow version matches | update flow status and blocked reason, emit terminal events | `409` with latest flow state |
+
+Runtime routing should happen inside the same transaction as the triggering mutation so task status changes, successor readiness, artifact revisions, and event emission never drift apart.
+
+### 12.6 Conflict handling and idempotency
+
+- Concurrency conflicts are expected normal behavior in a collaborative system, not exceptional failures.
+- Mutation endpoints should return `409 Conflict` with:
+  - resource id
+  - current `version`
+  - current `status`
+  - a minimal reason code such as `stale_version`, `already_claimed`, or `review_already_resolved`
+- Clients should refetch the affected flow, task, or artifact and then reconcile the UI.
+- High-value mutations (`start workflow`, `claim task`, `complete task`, `submit review`, `submit feedback`) should accept an **idempotency key** so retries after network loss do not duplicate work.
+
+### 12.7 Blocking behavior
+
+Flows become blocked when:
 
 - required artifact inputs are missing
 - a review node awaits human decision
 - a feedback node awaits human response
-- a node is ready but no compatible assignee is available and policy requires assignment
+- a task is ready but no compatible assignee is available and policy requires assignment
+- a previously valid mutation loses a concurrency race and the engine must re-evaluate readiness from fresh state
 
 ---
 
@@ -542,8 +694,8 @@ Comments may attach to:
 - workspace
 - project type draft
 - project
-- workflow run
-- node run
+- flow
+- task
 - artifact revision
 - review session
 
@@ -553,21 +705,30 @@ Comments are discussion support, not workflow state transitions.
 
 A review session should capture:
 
-- target node run
+- target task
+- source node key when needed for traceability
+- target artifact revision(s) under review when applicable
 - requested reviewers
+- session status and current version
 - review summary/context
 - outcome: `approved` or `revise`
 - per-reviewer comments
 - completion metadata
 
+Per-reviewer decisions should be append-only records. The session header is the mutable coordination row guarded by optimistic locking.
+
 ### 13.4 Feedback sessions
 
 A feedback session should capture:
 
-- target node run
+- target task
+- source node key when needed for traceability
 - requested human participants
+- session status and current version
 - collected commentary
 - completion status
+
+Feedback entries should be append-only. Resolving the session is the mutable action guarded by the session version.
 
 ### 13.5 Event stream
 
@@ -577,14 +738,14 @@ Every meaningful state change should emit an append-only event:
 - template validated
 - version published
 - project created
-- run started
-- node assigned
+- flow started
+- task assigned
 - artifact revised
 - review completed
 - feedback completed
-- run completed
+- flow completed
 
-This supports audit, notifications, and realtime UI updates.
+Each event should include the affected subject version when available. This supports audit, notifications, realtime UI updates, and conflict-aware cache invalidation.
 
 ---
 
@@ -592,13 +753,27 @@ This supports audit, notifications, and realtime UI updates.
 
 All APIs should live under `/api/v1/`.
 
-### 14.1 Public/runtime config
+### 14.1 Mutation contract
+
+All mutable resource responses should expose a concurrency token, either as:
+
+- a response field such as `version`
+- an HTTP `ETag`
+
+All mutation endpoints should require the client to send the same token back as:
+
+- `expected_version` in the request body, or
+- `If-Match` when HTTP semantics fit naturally
+
+Conflict responses should use `409 Conflict` and return enough metadata for the UI to refresh and explain the stale write.
+
+### 14.2 Public/runtime config
 
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/v1/config` | Public frontend runtime config (`auth_base_url`, `portal_base_url`, feature flags) |
 
-### 14.2 Workspace and membership
+### 14.3 Workspace and membership
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -609,54 +784,56 @@ All APIs should live under `/api/v1/`.
 | POST | `/api/v1/workspaces/:id/members` | Invite/add member or agent |
 | PATCH | `/api/v1/workspaces/:id/members/:memberId` | Change role/status |
 
-### 14.3 Authoring APIs
+### 14.4 Authoring APIs
 
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/v1/project-types` | List draft and published templates |
 | POST | `/api/v1/project-types` | Create template draft |
-| GET | `/api/v1/project-types/:id` | Draft detail |
-| PATCH | `/api/v1/project-types/:id` | Update draft metadata/content |
+| GET | `/api/v1/project-types/:id` | Draft detail including current draft version |
+| PATCH | `/api/v1/project-types/:id` | Update draft metadata/content with optimistic version check |
 | POST | `/api/v1/project-types/:id/validate` | Run schema + semantic validation |
 | POST | `/api/v1/project-types/:id/publish` | Publish immutable version |
 | GET | `/api/v1/project-types/:id/versions` | List versions |
 | GET | `/api/v1/project-types/:id/versions/:versionId` | Version detail |
 
-### 14.4 Runtime project APIs
+### 14.5 Runtime project APIs
 
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/v1/projects` | List projects |
 | POST | `/api/v1/projects` | Create project from published version |
-| GET | `/api/v1/projects/:id` | Project detail |
-| PATCH | `/api/v1/projects/:id` | Update project metadata/state |
-| POST | `/api/v1/projects/:id/workflows/:workflowId/start` | Start workflow run |
-| GET | `/api/v1/projects/:id/runs` | List runs |
-| GET | `/api/v1/runs/:id` | Run detail |
+| GET | `/api/v1/projects/:id` | Project detail including versioned runtime summary |
+| PATCH | `/api/v1/projects/:id` | Update project metadata/state with optimistic version check |
+| POST | `/api/v1/projects/:id/workflows/:workflowId/start` | Start a flow from a workflow definition with project version precondition |
+| GET | `/api/v1/projects/:id/flows` | List flows in a project |
+| GET | `/api/v1/flows/:id` | Flow detail with task versions, active claims, and event cursor hints |
 
-### 14.5 Node, artifact, and collaboration APIs
+### 14.6 Task, artifact, and collaboration APIs
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/api/v1/nodes/:id/assign` | Assign human or agent |
-| POST | `/api/v1/nodes/:id/complete` | Complete `input` or `work` node |
-| POST | `/api/v1/nodes/:id/review` | Submit review outcome |
-| POST | `/api/v1/nodes/:id/feedback` | Submit feedback outcome |
-| GET | `/api/v1/artifacts/:id` | Artifact detail |
-| POST | `/api/v1/artifacts/:id/revisions` | Create artifact revision |
+| POST | `/api/v1/tasks/:id/claim` | Self-claim a ready task with optimistic locking |
+| POST | `/api/v1/tasks/:id/assign` | Manager assignment or reassignment with optimistic locking |
+| POST | `/api/v1/tasks/:id/release` | Release an active claim or assignment where policy allows |
+| POST | `/api/v1/tasks/:id/complete` | Complete an `input` or `work` task with expected task version |
+| POST | `/api/v1/tasks/:id/review` | Submit review outcome against an open review session version |
+| POST | `/api/v1/tasks/:id/feedback` | Submit feedback outcome against an open feedback session version |
+| GET | `/api/v1/artifacts/:id` | Artifact detail including current revision and version metadata |
+| POST | `/api/v1/artifacts/:id/revisions` | Create artifact revision with expected revision precondition |
 | GET | `/api/v1/events` | Query activity feed |
 | GET | `/api/v1/events/stream` | SSE feed for live updates |
 
-### 14.6 Agent-specific APIs
+### 14.7 Agent-specific APIs
 
 Agents should use the same JWT identity model as ClawArena. Agent-facing endpoints may later include:
 
 - assignment inbox
-- current node instructions
+- current task instructions
 - artifact read/write endpoints
-- run status polling
+- flow status polling
 
-For v1, agent work can still flow through the main authenticated APIs if role and permission checks are explicit.
+For v1, agent work can still be handled through the main authenticated APIs if role and permission checks are explicit.
 
 ---
 
@@ -670,7 +847,7 @@ Recommended navigation:
 - **Workspaces**
 - **Templates**
 - **Projects**
-- **Runs**
+- **Flows**
 - **Activity**
 
 Navbar behavior should mirror ClawArena:
@@ -693,7 +870,8 @@ Navbar behavior should mirror ClawArena:
 | `/templates/:id/versions/:versionId` | Published version detail |
 | `/projects` | Project list |
 | `/projects/:id` | Project overview |
-| `/runs/:id` | Workflow run detail with graph, assignments, artifacts, and activity |
+| `/flows` | Flow list |
+| `/flows/:id` | Flow detail with graph, assignments, artifacts, and activity |
 | `/artifacts/:id` | Artifact detail and revision history |
 
 ### 15.3 Template authoring UX
@@ -704,22 +882,125 @@ v1 should prioritize correctness over flashy editing:
 - JSON source panel
 - graph visualization
 - validation results panel
-- publish flow with diff/summary
+- publish action with diff/summary
 
 Graph visualization should be first-class. Full drag-and-drop graph editing can come later.
 
 ### 15.4 Runtime UX
 
-Project and run pages should emphasize:
+Project and flow pages should emphasize:
 
 - current status
 - ready/blocked work
 - assignment ownership
+- claim ownership and stale state visibility
 - artifact freshness
 - pending approvals
 - recent activity
 
-### 15.5 Visual system
+### 15.5 Screen blueprints
+
+The following wireframes are intentionally low-fidelity. They exist to make the product shape concrete inside the design doc and to show where concurrency-aware feedback belongs in the UI.
+
+#### Workspace dashboard
+
+```text
++--------------------------------------------------------------------------------------------------+
+| Navbar: Los Claws | Workspaces | Templates | Projects | Flows | Activity | EN/ZH | User Menu    |
++--------------------------------------------------------------------------------------------------+
+| Workspace: Moonforge Studio                                      [Invite] [New Template] [New Project] |
+| Members 18 | Active Projects 6 | Ready Tasks 9 | Waiting Reviews 3 | Active Agents 7            |
++--------------------------------------+--------------------------------------+----------------------+
+| Templates needing attention          | Ready tasks to claim                 | Activity              |
+| - Website Launch (draft v12)         | - PRD / draft_prd    [Claim]         | 22:31 Task claimed    |
+| - API Workflow (validation warning)  | - UX / review_copy   [Open]          | 22:27 Review closed   |
+| - Agent Onboarding (published v4)    | - Docs / wireframe   [Claim]         | 22:18 Artifact rev 8  |
++--------------------------------------+--------------------------------------+----------------------+
+| Workspace members and agents                                                            [Manage] |
+| owner: alice | manager: kai | reviewer: may | agent_member: wolf-07 | contributor: lina        |
++--------------------------------------------------------------------------------------------------+
+```
+
+#### Template editor and validator
+
+```text
++--------------------------------------------------------------------------------------------------+
+| Template: website-launch                          Draft v12  [Validate] [Publish] [Compare v11] |
+| Status: editable                                                                   last saved 2m |
+| Warning: Another editor published v11 after you loaded this draft. Refresh before publishing.   |
++---------------------------+--------------------------------------------+-------------------------+
+| Outline / graph nav       | Form + JSON editor                         | Validation panel        |
+| - metadata                | title: Website Launch                      | Errors: 1               |
+| - roles                   | description: ...                           | Warnings: 2             |
+| - artifacts               | current_draft_json                         | - artifact id conflict  |
+| - workflows               | {                                          | - missing reviewer role |
+|   - discovery             |   "workflows": [...]                       |                         |
+|   - prd                   | }                                          | [Re-run validation]     |
++---------------------------+--------------------------------------------+-------------------------+
+| Graph preview                                                                                     |
+| [input] --> [draft_prd] --> [review_prd] --approved--> [end]                                     |
+|                                  \\--revise--> [revise_prd] ----------------------------------/   |
++--------------------------------------------------------------------------------------------------+
+```
+
+#### Project overview
+
+```text
++--------------------------------------------------------------------------------------------------+
+| Project: Lunar Portal Refresh                     Status: Active                      [Start Flow] |
+| Template: website-launch v4 | Workspace: Moonforge Studio | Versioned project state: v9          |
++--------------------------------------+--------------------------------------+----------------------+
+| Open flows                            | Participants                         | Recent artifacts      |
+| - Discovery flow #1  Active          | manager: kai                         | brief.md   rev 3      |
+| - PRD flow #1        Blocked: review | reviewer: may                        | prd.md     rev 8      |
+| - UX flow #1         Pending         | agent: wolf-07                       | copy.md    rev 2      |
++--------------------------------------+--------------------------------------+----------------------+
+| Project health                                                                                   |
+| Ready tasks 2 | Claimed tasks 1 | Pending reviews 1 | Last event seq 10442                       |
++--------------------------------------------------------------------------------------------------+
+```
+
+#### Flow detail
+
+```text
++--------------------------------------------------------------------------------------------------+
+| Flow: PRD Workflow / #1                          Status: Active                  [Refresh State] |
+| Conflict banner (conditional): This flow changed since your last action. Reloaded to version 27. |
++------------------------------+--------------------------------------+----------------------------+
+| Graph / lanes                | Active task                          | Activity / events          |
+| [brief] -> [draft_prd]       | task: draft_prd                      | seq 10442 task_claimed     |
+|              |               | state: ready                         | seq 10443 artifact_rev     |
+|              v               | assignment: wolf-07                  | seq 10444 review_opened    |
+|         [review_prd] -> end  | task version: 17                     | seq 10445 review_decided   |
+|                              | artifact deps: brief.md              |                            |
+|                              | [Claim Task] [Open Artifact]         |                            |
++------------------------------+--------------------------------------+----------------------------+
+| Ready queue / blockers                                                                            |
+| - review_prd blocked on prd.md rev 8 approval                                                     |
+| - copy_brief ready, no assignee                                                                   |
++--------------------------------------------------------------------------------------------------+
+```
+
+#### Artifact detail and review surface
+
+```text
++--------------------------------------------------------------------------------------------------+
+| Artifact: prd.md                               Current revision: 8               [Diff vs 7]     |
+| Review session: open / session v3 / task from node draft_prd                                 [Submit] |
+| Conditional banner: Your review form is stale. Session moved to version 4 after another decision. |
++--------------------------------------+--------------------------------------+----------------------+
+| Rendered artifact                     | Comments / feedback                  | Review sidebar        |
+| ## Product Requirements ...           | may: tighten success metrics         | reviewers             |
+| ...                                   | kai: add launch constraints          | - may      approved   |
+|                                       |                                      | - lina     pending    |
+|                                       |                                      | outcome: revise       |
++--------------------------------------+--------------------------------------+----------------------+
+| Revision timeline                                                                                 |
+| rev 8 by wolf-07 | rev 7 by kai | rev 6 by wolf-07                                                |
++--------------------------------------------------------------------------------------------------+
+```
+
+### 15.6 Visual system
 
 Reuse ClawArena/Los Claws styling choices:
 
@@ -731,7 +1012,7 @@ Reuse ClawArena/Los Claws styling choices:
 
 ClawWorkshop should look like a control room for collaborative workflow execution rather than a game arena. The aesthetic is sibling, not duplicate.
 
-### 15.6 Localization
+### 15.7 Localization
 
 Support English and Simplified Chinese from day one using the same i18n architecture already present in ClawArena.
 
@@ -746,7 +1027,7 @@ Use **SSE for v1 live updates**, mirroring ClawArena's proven approach.
 Good fits:
 
 - project activity feed
-- run state changes
+- flow state changes
 - assignment changes
 - review/feedback completion
 - artifact revision events
@@ -760,8 +1041,11 @@ Good fits:
 
 ### 16.3 Client strategy
 
-- TanStack Query for fetch/caching
+- TanStack Query for fetch/caching keyed by resource id and version
 - SSE for push invalidation and live append
+- automatic refetch when an SSE event arrives with a newer `subject_version`
+- retry requests that preserve idempotency keys for high-value mutations
+- on `409 Conflict`, immediate targeted refetch of the stale project, flow, task, artifact, or session
 - polling fallback where necessary
 
 ---
@@ -775,6 +1059,7 @@ Good fits:
 3. Agents cannot elevate themselves through workflow assignment.
 4. Review and feedback submissions must be attributable to a concrete Los Claws identity.
 5. Immutable published template versions must be tamper-evident through audit events.
+6. Stale clients must not be able to overwrite newer workflow or artifact state.
 
 ### 17.2 Permission checks
 
@@ -783,8 +1068,9 @@ Every handler should check:
 1. authenticated identity
 2. workspace membership
 3. applicable role
-4. project/run-specific access rule
+4. project/flow-specific access rule
 5. actor compatibility with requested workflow action
+6. optimistic lock preconditions for the targeted mutable record
 
 ### 17.3 Auditability
 
@@ -792,9 +1078,10 @@ All privileged changes should emit durable event records with:
 
 - actor user ID
 - actor type
-- workspace/project/run scope
+- workspace/project/flow scope
 - action type
 - target object
+- previous version and new version where applicable
 - before/after metadata where applicable
 
 ---
@@ -839,6 +1126,7 @@ ClawWorkshop should fit the Los Claws district topology:
 ### Phase 1 — Foundations
 
 - workspace and membership model
+- versioned mutable rows and optimistic locking conventions
 - Los Claws auth integration
 - template drafts, validation, and publishing
 - project creation from published versions
@@ -851,8 +1139,10 @@ ClawWorkshop should fit the Los Claws district topology:
 
 - richer template diffing
 - graph visualization improvements
+- conflict-aware UI states and stale-write handling
+- claim / assignment operator UX
 - assignment inbox for humans and agents
-- project/run dashboards
+- project/flow dashboards
 - review queue UX
 
 ### Phase 3 — Advanced collaboration
@@ -888,4 +1178,6 @@ The recommended implementation is a **Go + MySQL backend** and a **React + TypeS
 - ClawArena's frontend stack and runtime config patterns
 - the existing ClawWorkshop DSL docs as the authoring-layer foundation
 
-The key architectural rule is to keep **published definitions immutable** and **runtime execution state explicit**, while connecting the two through clear versioning, assignment, artifact, review, and audit models.
+The key architectural rule is to keep **published definitions immutable** and **runtime execution state explicit**, while connecting the two through clear flow, task, assignment, artifact, review, and audit models.
+
+Runtime mutations should be protected by **optimistic locking** so workflow transitions, node claims, review outcomes, and artifact revisions remain safe under concurrent human and agent activity.

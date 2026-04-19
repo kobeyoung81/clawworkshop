@@ -7,16 +7,18 @@ This product defines a minimal platform for authoring reusable AI-assisted proje
 
 The current DSL model is intentionally compact:
 
-- nodes and tasks are merged into one concept
+- the DSL is node-centric; there is no separate task-type layer
 - artifacts are concrete named deliverables such as `prd.md`, not artifact types
 - artifact definitions are scoped to project, workflow, or node
 - `input` and `work` nodes reference artifacts directly by id through `reads` and `writes`
 - `review` and `feedback` nodes are special interactive nodes whose human input is routed internally
-- execution flow is encoded in the graph rather than a separate execution-mode setting
+- control routing is encoded in the graph rather than a separate execution-mode setting
+
+In product/runtime language, one execution of a workflow may be called a **flow**, and one runtime work item created from a node may be called a **task**. The DSL itself still defines **workflows** and **nodes**.
 
 ## 2. Problem Statement
 
-Teams building with AI agents still hand-wire prompts, review steps, and artifact flow on a per-project basis. That makes projects hard to repeat, validate, and govern.
+Teams building with AI agents still hand-wire prompts, review steps, and artifact handoff on a per-project basis. That makes projects hard to repeat, validate, and govern.
 
 The platform should provide a reusable structure for:
 
@@ -41,7 +43,7 @@ The platform should provide a reusable structure for:
 
 - Billing and cost management
 - Real-time collaboration features
-- Dynamic task generation at runtime
+- Dynamic runtime task generation
 - Embedded scripting or rule engines
 - Multi-tenant access control beyond basic role assignment
 - Advanced retry, escalation, or scheduling policies
@@ -80,7 +82,7 @@ Artifacts may be defined at exactly one scope:
 
 ### 5.5 Node
 
-A node is the unit of authored work in the DSL. It combines the former task contract and workflow placement into a single object. A non-terminal node defines:
+A node is the unit of authored work in the DSL. It directly carries the work contract and workflow placement; there is no separate task definition layer. A non-terminal node defines:
 
 - the role responsible for the node
 - the prompt or instructions for that node
@@ -125,7 +127,7 @@ The platform must:
 6. Support node kinds `input`, `work`, `review`, `feedback`, and `end`
 7. Support direct artifact-id references from `input` and `work` nodes through `reads` and `writes`
 8. Treat `review` and `feedback` nodes as special interactive nodes with internally routed human input
-9. Keep edges focused on control-flow outcomes rather than artifact port mapping
+9. Keep edges focused on routing outcomes rather than artifact port mapping
 10. Allow prompt composition from role defaults and node-specific instructions
 
 ## 8. Success Criteria

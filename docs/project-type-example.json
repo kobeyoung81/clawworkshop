@@ -34,7 +34,7 @@
     ],
     "workflow_types": [
       {
-        "id": "discovery_flow",
+        "id": "discovery_workflow",
         "description": "Capture a brief, iterate on a PRD with feedback, approve it, and create a wireframe.",
         "artifacts": [
           {
