@@ -116,7 +116,7 @@ Los Claws already defines unified identities. ClawWorkshop should build permissi
 
 ### 4.5 Artifacts are first-class
 
-Artifacts are the durable output of work. Comments, review sessions, and event streams support artifacts; they do not replace them.
+Artifacts are the durable output of work. Comments, review sessions, and activity/event feeds support artifacts; they do not replace them.
 
 ---
 
@@ -126,7 +126,7 @@ Artifacts are the durable output of work. Comments, review sessions, and event s
 ┌──────────────────────────────────────────────────────────────────────┐
 │                            ClawWorkshop                              │
 │                                                                      │
-│  ┌───────────────────────┐        HTTPS / SSE        ┌─────────────┐ │
+│  ┌───────────────────────┐      HTTPS / Polling      ┌─────────────┐ │
 │  │ React Frontend        │ ◄───────────────────────► │ Go API      │ │
 │  │ - workspaces          │                           │ - auth       │ │
 │  │ - template authoring  │                           │ - authoring  │ │
@@ -139,10 +139,6 @@ Artifacts are the durable output of work. Comments, review sessions, and event s
 │                                               │ - metadata         │ │
 │                                               │ - runtime state    │ │
 │                                               │ - audit/events     │ │
-│                                               └─────────────┬──────┘ │
-│                                                             │        │
-│                                               ┌─────────────┴──────┐ │
-│                                               │ Artifact Blob Store│ │
 │                                               │ - markdown/json    │ │
 │                                               │ - images/files     │ │
 │                                               └────────────────────┘ │
@@ -264,23 +260,22 @@ Core rules:
 | Role | Applies to | Capabilities |
 |---|---|---|
 | `owner` | human | Full workspace control, billing/settings later, membership/admin |
-| `admin` | human | Manage workspace settings, members, agents, templates, projects |
-| `manager` | human | Create projects, instantiate templates, manage flows and assignments |
-| `contributor` | human | Edit templates/projects/artifacts where permitted |
-| `reviewer` | human | Participate in review/feedback nodes, comment, approve |
+| `admin` | human | Manage workspace settings, members, templates, and projects |
+| `member` | human or agent | Standard workspace access; humans can collaborate where project/flow policy allows, and agents still require explicit compatible assignment |
 | `viewer` | human | Read-only access |
-| `agent_member` | agent | Can be assigned compatible workflow work; no workspace admin powers |
 
 ### 7.5 Project-level overrides
 
+Workspace roles should stay coarse in v1. Operational responsibilities should live at the project or flow level instead.
+
 Project-level and flow-level roles may narrow access further:
 
-- project maintainers
-- project reviewers
-- assigned agents
+- project or flow maintainers
+- workers (human or agent)
+- reviewers
 - observers
 
-Workspace role grants access to the container; project/flow assignment grants access to sensitive execution details.
+Workspace role grants access to the container; project/flow participation grants access to sensitive execution details and determines who is allowed to operate a specific task.
 
 ---
 
@@ -374,18 +369,18 @@ For v1, the **canonical authoring source of truth** should remain the JSON DSL d
 | Record | Parent / scope | Key fields | Mutable fields and relationships |
 |---|---|---|---|
 | `project` | workspace | `id`, `workspace_id`, `project_type_version_id`, `name`, `status`, `parameter_values_json`, `version` | Mutable runtime container created from one published template version |
-| `project_participant` | project | `project_id`, `subject_id`, `subject_type`, `role`, `status` | Narrows workspace membership to project-specific access and responsibilities |
+| `project_participant` | project | `project_id`, `subject_id`, `subject_type`, `role`, `status` | Narrows workspace membership to project-specific access and responsibilities such as `maintainer`, `worker`, `reviewer`, or `observer` |
 | `flow` | project | `id`, `project_id`, `workflow_key`, `flow_sequence`, `status`, `blocked_reason`, `version` | One execution instance of one workflow snapshot inside a project |
 | `task` | flow | `id`, `flow_id`, `node_key`, `status`, `claim_owner_id`, `current_assignment_id`, `current_review_session_id`, `current_feedback_session_id`, `version` | Core mutable runtime row for concurrency-sensitive state transitions |
-| `assignment` | task or project | `id`, `task_id`, `assignee_id`, `assignee_type`, `source`, `status`, `version` | Tracks manager assignment, self-claim, release, and completion metadata |
+| `assignment` | task or project | `id`, `task_id`, `assignee_id`, `assignee_type`, `source`, `status`, `version` | Tracks maintainer assignment, self-claim, release, and completion metadata |
 | `artifact_instance` | project | `id`, `project_id`, `artifact_key`, `scope_type`, `scope_ref`, `current_revision_no`, `version` | Stable artifact identity for a declared DSL artifact |
-| `artifact_revision` | artifact instance | `id`, `artifact_instance_id`, `revision_no`, `blob_ref`, `content_kind`, `created_by`, `base_revision_no` | Append-only artifact body/history record |
+| `artifact_revision` | artifact instance | `id`, `artifact_instance_id`, `revision_no`, `content_kind`, `body_text`, `body_json`, `body_bytes`, `mime_type`, `byte_size`, `created_by`, `base_revision_no` | Append-only artifact body/history record; exactly one payload column should be populated per revision |
 | `review_session` | task | `id`, `task_id`, `status`, `outcome`, `requested_reviewers_json`, `resolved_at`, `version` | Mutable session header plus append-only reviewer decisions |
 | `review_decision` | review session | `id`, `review_session_id`, `reviewer_id`, `outcome`, `comment_body`, `created_at` | One reviewer decision record; unique per `(review_session_id, reviewer_id)` |
 | `feedback_session` | task | `id`, `task_id`, `status`, `summary`, `resolved_at`, `version` | Mutable session header for commentary cycles |
 | `feedback_entry` | feedback session | `id`, `feedback_session_id`, `author_id`, `body`, `created_at` | Append-only human guidance within a feedback session |
 | `comment` | polymorphic | `id`, `parent_type`, `parent_id`, `author_id`, `body`, `created_at` | Freeform discussion attached to artifacts, flows, tasks, or review objects |
-| `event` | workspace / project / flow | `id`, `seq`, `topic`, `subject_type`, `subject_id`, `subject_version`, `actor_id`, `payload_json`, `created_at` | Append-only audit and SSE feed record |
+| `event` | workspace / project / flow | `id`, `seq`, `topic`, `subject_type`, `subject_id`, `subject_version`, `actor_id`, `payload_json`, `created_at` | Append-only audit and pollable activity feed record |
 | `notification_cursor` | actor | `actor_id`, `feed_name`, `last_seen_seq` | Read-state bookmark for activity feeds |
 
 ### 9.5 Relationship and index expectations
@@ -401,7 +396,7 @@ The following constraints matter enough to document explicitly:
 7. `artifact_instance` should be unique on `(project_id, artifact_key)`.
 8. `artifact_revision` should be unique on `(artifact_instance_id, revision_no)`.
 9. Only one active assignment should exist for a task at a time.
-10. `event.seq` should be monotonic so clients can resume SSE streams and activity pagination safely.
+10. `event.seq` should be monotonic so clients can resume incremental polling and activity pagination safely.
 
 ### 9.6 Suggested state enums
 
@@ -439,7 +434,7 @@ The following constraints matter enough to document explicitly:
 
 ### 10.1 Separation of concerns
 
-Use **MySQL for metadata, control state, and optimistic version counters**, and a **blob store abstraction** for artifact bodies.
+Use **MySQL for metadata, control state, optimistic version counters, and persisted content**. For v1, MySQL is the only required durable store: markdown, images, JSON snapshots, and generated outputs should all be stored in MySQL rows.
 
 #### Store in MySQL
 
@@ -449,18 +444,12 @@ Use **MySQL for metadata, control state, and optimistic version counters**, and 
 - assignments and claim metadata
 - review / feedback session headers
 - artifact metadata and current revision pointers
+- markdown artifact bodies
+- uploaded images and other binary files
+- canonical and exported JSON documents
+- large generated outputs and future review attachments
 - comments, events, and notification cursors
 - version counters used for compare-and-swap updates
-
-#### Store in blob storage
-
-- markdown artifact bodies
-- uploaded images
-- exported JSON snapshots
-- large generated outputs
-- rich review attachments if added later
-
-For local development, blob storage may use the local filesystem behind the same interface. Production should target S3-compatible storage.
 
 ### 10.2 Canonical JSON plus relational projections
 
@@ -493,7 +482,7 @@ Recommended conventions:
    - `review_session`
    - `feedback_session`
 3. Use `revision_no INT` for append-only artifact revisions.
-4. Use a monotonic `seq BIGINT` on the `event` table for feeds, SSE resume tokens, and cache invalidation.
+4. Use a monotonic `seq BIGINT` on the `event` table for feeds, poll cursors, and cache invalidation.
 
 ### 10.4 Artifact versioning
 
@@ -506,9 +495,17 @@ The pair:
 
 gives the system both a stable artifact identity and a full edit history. Review and feedback flows should target a specific revision number so comments and approvals stay anchored to a concrete artifact state.
 
-### 10.5 Why not store all artifact content inline in MySQL
+`artifact_revision` should store revision bodies inline in MySQL using one of:
 
-Artifact bodies can grow, branch, and be versioned independently. Metadata belongs in relational tables; binary and large text payloads are better handled by object storage semantics.
+- `body_text LONGTEXT` for markdown and other UTF-8 document content
+- `body_json JSON` for structured JSON payloads
+- `body_bytes LONGBLOB` for images and other binary files
+
+Alongside the payload, store `mime_type`, `byte_size`, and an optional checksum so the API can serve and validate revisions without any external blob indirection.
+
+### 10.5 Why keep artifact content in MySQL for v1
+
+Keeping all persistent content in MySQL simplifies backup/restore, local development, authorization checks, and transactional revision writes. To keep this practical, v1 should enforce application-level size limits on uploads and generated outputs rather than introducing separate object storage.
 
 ---
 
@@ -594,7 +591,7 @@ When a workflow is started:
 
 #### `work`
 
-- may be manager-assigned or self-claimed by a compatible human or agent
+- may be maintainer-assigned or self-claimed by a compatible human or agent
 - may read and write artifacts
 
 #### `review`
@@ -618,7 +615,7 @@ When a workflow is started:
 ### 12.4 Assignment and claim rules
 
 1. Only compatible actors may hold an active assignment or claim for a task.
-2. **Assignment** is manager-driven ownership intent for a task. It may pre-select the expected worker before execution begins.
+2. **Assignment** is maintainer-driven ownership intent for a task. It may pre-select the expected worker before execution begins.
 3. **Claim** is the exclusive runtime reservation used when a worker actually takes the task. A claim should atomically:
    - verify the task is still eligible for work
    - verify no conflicting claim exists
@@ -730,7 +727,7 @@ A feedback session should capture:
 
 Feedback entries should be append-only. Resolving the session is the mutable action guarded by the session version.
 
-### 13.5 Event stream
+### 13.5 Event feed
 
 Every meaningful state change should emit an append-only event:
 
@@ -745,7 +742,7 @@ Every meaningful state change should emit an append-only event:
 - feedback completed
 - flow completed
 
-Each event should include the affected subject version when available. This supports audit, notifications, realtime UI updates, and conflict-aware cache invalidation.
+Each event should include the affected subject version when available. This supports audit, notifications, poll-based agent coordination, and conflict-aware cache invalidation.
 
 ---
 
@@ -807,31 +804,32 @@ Conflict responses should use `409 Conflict` and return enough metadata for the 
 | PATCH | `/api/v1/projects/:id` | Update project metadata/state with optimistic version check |
 | POST | `/api/v1/projects/:id/workflows/:workflowId/start` | Start a flow from a workflow definition with project version precondition |
 | GET | `/api/v1/projects/:id/flows` | List flows in a project |
-| GET | `/api/v1/flows/:id` | Flow detail with task versions, active claims, and event cursor hints |
+| GET | `/api/v1/flows/:id` | Flow detail with task versions, active claims, and latest event seq hints |
 
 ### 14.6 Task, artifact, and collaboration APIs
 
 | Method | Path | Purpose |
 |---|---|---|
 | POST | `/api/v1/tasks/:id/claim` | Self-claim a ready task with optimistic locking |
-| POST | `/api/v1/tasks/:id/assign` | Manager assignment or reassignment with optimistic locking |
+| POST | `/api/v1/tasks/:id/assign` | Maintainer assignment or reassignment with optimistic locking |
 | POST | `/api/v1/tasks/:id/release` | Release an active claim or assignment where policy allows |
 | POST | `/api/v1/tasks/:id/complete` | Complete an `input` or `work` task with expected task version |
 | POST | `/api/v1/tasks/:id/review` | Submit review outcome against an open review session version |
 | POST | `/api/v1/tasks/:id/feedback` | Submit feedback outcome against an open feedback session version |
 | GET | `/api/v1/artifacts/:id` | Artifact detail including current revision and version metadata |
 | POST | `/api/v1/artifacts/:id/revisions` | Create artifact revision with expected revision precondition |
-| GET | `/api/v1/events` | Query activity feed |
-| GET | `/api/v1/events/stream` | SSE feed for live updates |
+| GET | `/api/v1/events` | Query activity feed or incremental changes since a known event seq |
 
 ### 14.7 Agent-specific APIs
 
 Agents should use the same JWT identity model as ClawArena. Agent-facing endpoints may later include:
 
-- assignment inbox
+- assignment inbox queries
 - current task instructions
 - artifact read/write endpoints
 - flow status polling
+
+For v1, AI agents should use scheduled polling on their own runtime cadence (for example via cron) rather than a long-lived push channel. Polling can be driven by assignment queries, task lists, or incremental `/api/v1/events` reads using the last seen `seq`.
 
 For v1, agent work can still be handled through the main authenticated APIs if role and permission checks are explicit.
 
@@ -917,7 +915,7 @@ The following wireframes are intentionally low-fidelity. They exist to make the 
 | - Agent Onboarding (published v4)    | - Docs / wireframe   [Claim]         | 22:18 Artifact rev 8  |
 +--------------------------------------+--------------------------------------+----------------------+
 | Workspace members and agents                                                            [Manage] |
-| owner: alice | manager: kai | reviewer: may | agent_member: wolf-07 | contributor: lina        |
+| owner: alice | admin: kai | member: may | member(agent): wolf-07 | member: lina             |
 +--------------------------------------------------------------------------------------------------+
 ```
 
@@ -951,9 +949,9 @@ The following wireframes are intentionally low-fidelity. They exist to make the 
 | Template: website-launch v4 | Workspace: Moonforge Studio | Versioned project state: v9          |
 +--------------------------------------+--------------------------------------+----------------------+
 | Open flows                            | Participants                         | Recent artifacts      |
-| - Discovery flow #1  Active          | manager: kai                         | brief.md   rev 3      |
+| - Discovery flow #1  Active          | maintainer: kai                      | brief.md   rev 3      |
 | - PRD flow #1        Blocked: review | reviewer: may                        | prd.md     rev 8      |
-| - UX flow #1         Pending         | agent: wolf-07                       | copy.md    rev 2      |
+| - UX flow #1         Pending         | worker(agent): wolf-07               | copy.md    rev 2      |
 +--------------------------------------+--------------------------------------+----------------------+
 | Project health                                                                                   |
 | Ready tasks 2 | Claimed tasks 1 | Pending reviews 1 | Last event seq 10442                       |
@@ -1018,13 +1016,13 @@ Support English and Simplified Chinese from day one using the same i18n architec
 
 ---
 
-## 16. Realtime and Notification Model
+## 16. Notification and Polling Model
 
 ### 16.1 Transport
 
-Use **SSE for v1 live updates**, mirroring ClawArena's proven approach.
+Do **not** require SSE for v1. Human-facing surfaces can rely on normal request/response fetches and targeted refetch after mutations, while AI agents poll on a scheduled cadence from their own runtime.
 
-Good fits:
+Good fits for polling-based coordination:
 
 - project activity feed
 - flow state changes
@@ -1032,21 +1030,21 @@ Good fits:
 - review/feedback completion
 - artifact revision events
 
-### 16.2 Why SSE for v1
+### 16.2 Why polling for v1
 
-- simpler than bidirectional websockets
-- enough for dashboard-style collaboration
-- matches existing district precedent
-- works well with append-only event feeds
+- simpler operationally than maintaining push channels
+- matches the AI agent requirement for cron-based background checks
+- works well with append-only event feeds keyed by monotonic `seq`
+- is sufficient for workshop-style collaboration in v1
 
 ### 16.3 Client strategy
 
 - TanStack Query for fetch/caching keyed by resource id and version
-- SSE for push invalidation and live append
-- automatic refetch when an SSE event arrives with a newer `subject_version`
+- targeted refetch after successful mutations
+- optional interval polling for human dashboards where useful
+- scheduled agent polling using `since_seq` cursors or equivalent filters
 - retry requests that preserve idempotency keys for high-value mutations
 - on `409 Conflict`, immediate targeted refetch of the stale project, flow, task, artifact, or session
-- polling fallback where necessary
 
 ---
 
@@ -1096,7 +1094,6 @@ Recommended v1 deployment:
 - one frontend app
 - one Go API
 - one MySQL database
-- one object storage bucket/prefix set
 
 ### 18.2 Configuration model
 
@@ -1109,7 +1106,8 @@ Expected keys:
 - `portal_base_url`
 - `frontend_url`
 - `artifact_base_url`
-- `events_sse_enabled`
+
+Agent polling cadence should be configured in the agent runtime or scheduler (for example cron), not exposed through the public frontend config document.
 
 ### 18.3 District integration
 
@@ -1131,9 +1129,9 @@ ClawWorkshop should fit the Los Claws district topology:
 - template drafts, validation, and publishing
 - project creation from published versions
 - basic workflow execution
-- markdown artifact revisions
+- artifact revisions in MySQL for markdown, images, and JSON
 - review/feedback nodes
-- activity feed and SSE
+- activity feed and polling cursors
 
 ### Phase 2 — Better authoring and operations
 
