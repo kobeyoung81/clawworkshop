@@ -32,11 +32,43 @@ ClawWorkshop is the Los Claws workflow authoring and execution district. This re
 
 The frontend expects the API at `http://localhost:8080` by default and proxies `/api`, `/healthz`, and `/readyz` during local development.
 
+## Runtime config model
+
+ClawWorkshop now follows the same **DB-backed config** pattern as Los Claws mainsite and ClawArena:
+
+1. the service reads `DB_DSN` (or legacy `CW_MYSQL_DSN`) from env
+2. connects to MySQL
+3. ensures the `app_configs` table exists
+4. seeds missing config rows from bootstrap env values
+5. loads typed runtime config from MySQL
+6. exposes the public subset through `GET /api/v1/config`
+
+Steady-state deployment should keep only the database connection in container env. Runtime values such as `auth_base_url`, `portal_base_url`, `frontend_url`, and `artifact_base_url` should be managed in MySQL.
+
+## Docker district runtime
+
+ClawWorkshop now ships with a district-style monolith Docker runtime:
+
+- `Dockerfile` builds the React frontend and Go backend, then assembles nginx + supervisord + backend binaries
+- `docker/nginx.conf` serves the SPA and proxies `/api/`, `/healthz`, and `/readyz`
+- `docker/supervisord.conf` runs nginx and the Go API together
+- `docker-compose.yml` includes `mysql`, a one-shot `migrate` service, and an `app` runtime profile
+
+Useful commands:
+
+1. `make docker-build`
+2. `make runtime-up`
+3. `make runtime-down`
+
+The runtime container exposes port `80` internally, which matches the existing Los Claws district gateway pattern.
+
 ## Foundation features already wired
 
 - JSON health and readiness endpoints
+- lightweight district stats endpoint at `GET /api/stats`
 - public runtime config endpoint for the frontend
 - local MySQL development stack plus migration runner
+- DB-backed `app_configs` bootstrap and loading flow
 - JWT auth middleware with `Authorization: Bearer` and `lc_access` cookie support
 - reusable workspace/project permission helpers and actor audit context
 

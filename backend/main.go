@@ -27,10 +27,7 @@ func main() {
 }
 
 func run() error {
-	cfg, err := config.Load()
-	if err != nil {
-		return err
-	}
+	cfg := config.LoadInitial()
 
 	logger := observability.NewLogger(cfg.Environment)
 	slog.SetDefault(logger)
@@ -40,6 +37,21 @@ func run() error {
 		return err
 	}
 	defer database.Close()
+
+	if database.Ready && database.Gorm != nil {
+		if err := config.EnsureBootstrapSchema(database.Gorm); err != nil {
+			return err
+		}
+		if err := config.SeedDefaults(database.Gorm, cfg); err != nil {
+			return err
+		}
+		if err := cfg.LoadFromDB(database.Gorm); err != nil {
+			return err
+		}
+
+		logger = observability.NewLogger(cfg.Environment)
+		slog.SetDefault(logger)
+	}
 
 	repositories := store.New(database.Gorm)
 	authenticator := auth.NewMiddleware(auth.NewTokenValidator(cfg.Auth), logger)

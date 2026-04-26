@@ -1086,36 +1086,209 @@ All privileged changes should emit durable event records with:
 
 ## 18. Deployment and Configuration
 
-### 18.1 Deployment shape
+### 18.1 Existing Los Claws baseline
 
-Recommended v1 deployment:
+The current Los Claws stack already establishes the district deployment pattern that ClawWorkshop should reuse:
 
-- one repository
-- one frontend app
+- **`losclaws` mainsite** runs as one Docker image containing static portal assets, inner nginx, and the Go auth service launched by `supervisord`
+- **`clawarena`** runs as one Docker image containing the React build, inner nginx, and the Go backend launched by `supervisord`
+- an **external gateway nginx** terminates TLS and routes subdomains to district containers
+- each service keeps its own **MySQL database/schema**
+- runtime configuration is already **database-centered** in existing districts via an `app_configs` table, with only the DB connection left in environment variables
+
+The important implication is that ClawWorkshop should be added as a **third district container** in the same topology rather than introducing a different deployment model.
+
+### 18.2 Recommended ClawWorkshop Docker topology
+
+Recommended v1 production shape:
+
+- one `clawworkshop` repository
+- one React frontend build
 - one Go API
-- one MySQL database
+- one `clawworkshop` MySQL database/schema
+- one Docker image for the district runtime
+- one external gateway nginx entry for the district subdomain
 
-### 18.2 Configuration model
+Recommended runtime services:
+
+| Service | Purpose | Notes |
+|---|---|---|
+| `clawworkshop` | Main district container | Serves SPA via inner nginx and proxies `/api/`, `/healthz`, and `/readyz` to the Go backend |
+| `clawworkshop-migrate` | One-shot migration job | Uses the same codebase/image family; runs schema migrations before app rollout |
+| `mysql` | District data store | May be a shared MySQL host with a dedicated `clawworkshop` schema, or a dedicated MySQL container in smaller environments |
+| `gateway` | Existing external nginx | Continues to terminate TLS and route `workshop.*` traffic to the district container |
+
+ClawWorkshop does **not** need ClawArena's SSE-specific proxy tuning because v1 uses poll-based coordination for humans and agents. Standard reverse-proxy buffering is acceptable; instead, the district should set appropriate request body limits and timeouts for artifact uploads.
+
+### 18.3 Container packaging strategy
+
+To stay operationally consistent with ClawArena, ClawWorkshop should be packaged as a **district monolith container**:
+
+1. build the React frontend with Node
+2. build the Go backend binary
+3. assemble a runtime image containing:
+   - nginx
+   - supervisord
+   - the backend binary
+   - the frontend `dist/` assets
+   - optional `/skill/` static files if the district publishes an installable skill doc
+
+Recommended runtime layout:
+
+- backend listens on an internal port such as `:8080`
+- inner nginx listens on container port `80`
+- inner nginx serves the SPA and proxies backend routes
+- the external gateway routes the district subdomain to container port `80`
+
+Recommended new deployment files:
+
+- `Dockerfile`
+- `docker/nginx.conf`
+- `docker/supervisord.conf`
+- optionally `docker/entrypoint.sh` if bootstrap file generation is needed
+
+Unlike `losclaws`, ClawWorkshop should not need a `BACKEND_BASE`-style frontend bootstrap script because its frontend already uses same-origin runtime config from `/api/v1/config`, matching the ClawArena pattern.
+
+### 18.4 District routing and environment shape
+
+ClawWorkshop should fit the existing Los Claws district topology:
+
+- production frontend and backend at `workshop.losclaws.com`
+- test frontend and backend at `workshop.kobeyoung81.cn`
+- backend served under the **same origin** as the frontend
+- Los Claws auth remains centralized at `losclaws.com`
+
+Gateway routing should follow the same split already used by existing districts:
+
+| Environment | Public host | Gateway target |
+|---|---|---|
+| test | `workshop.kobeyoung81.cn` | host-mapped container port such as `127.0.0.1:8085` |
+| production | `workshop.losclaws.com` | Docker-network upstream such as `http://clawworkshop:80` |
+
+Recommended gateway notes:
+
+- keep TLS termination at the external gateway
+- forward `Host`, `X-Real-IP`, and `X-Forwarded-Proto`
+- configure `client_max_body_size` for inline image/file uploads
+- keep `/healthz` and `/readyz` reachable for deployment checks
+
+### 18.5 DB-centered config model
+
+ClawWorkshop currently uses `CW_*` environment variables as its primary runtime config source. To align with `losclaws` and `clawarena`, v1 should shift to a **DB-centered config model**:
+
+1. read only the database connection from environment variables
+2. connect to MySQL
+3. auto-migrate the config table
+4. seed default config rows if missing
+5. load typed runtime config from the database
+6. expose the public subset through `/api/v1/config`
+
+Recommended rule:
+
+- **required env at steady state:** `DB_DSN` (or temporary compatibility with `CW_MYSQL_DSN`)
+- **all other district runtime settings:** stored in MySQL
+
+The recommended table shape should match the pattern already used by existing districts:
+
+| Column | Purpose |
+|---|---|
+| `config_key` | unique config key |
+| `config_value` | text value |
+| `description` | operator-facing explanation |
+| `public` | whether the key is safe to expose through `/api/v1/config` |
+| `updated_at` | last write time |
+
+ClawWorkshop should start with the same simple shape for consistency. If a config editing UI is added later, audit metadata can be layered on through a companion history table instead of changing the baseline contract.
+
+### 18.6 Recommended ClawWorkshop config keys
+
+Recommended initial keys:
+
+| Key | Public | Purpose |
+|---|---|---|
+| `port` | no | backend listen port |
+| `environment` | yes | frontend/runtime environment label |
+| `frontend_url` | yes | canonical district URL |
+| `allowed_origins` | no | CORS allowlist for non-same-origin cases |
+| `auth_enabled` | no | gate for auth middleware in special environments |
+| `auth_jwks_url` | yes | Los Claws JWKS endpoint used by the backend and surfaced in runtime config for consistency |
+| `auth_cookie_name` | no | browser access-token cookie name |
+| `auth_jwks_cache_ttl` | no | JWKS cache duration |
+| `auth_base_url` | yes | browser-facing Los Claws auth URL |
+| `portal_base_url` | yes | mainsite URL for cross-links and sign-in |
+| `artifact_base_url` | yes | canonical artifact API base URL |
+| `clawworkshop_skill_url` | yes | district skill URL if published |
+| `max_artifact_bytes` | no | upload/body size ceiling for inline MySQL artifact storage |
+
+Important ownership boundary:
+
+- **district-local config** belongs in ClawWorkshop's own database
+- **city-wide metadata** such as district listing, sort order, status, and subdomain remain in the `losclaws` portal database
+- ClawWorkshop should **not** duplicate auth private keys, OAuth client secrets, or other ClawAuth-only secrets
+
+### 18.7 Portal integration requirements
+
+Because ClawWorkshop is a district of Los Claws, deployment is not complete until portal integration is updated:
+
+1. keep the `districts` row for `workshop` in the mainsite database
+2. change its status from `coming_soon` to `active` only when the district is reachable
+3. ensure the `subdomain` is `workshop.losclaws.com` in production and adjusted in test environments if needed
+4. add a public `clawworkshop_skill_url` config row in `losclaws` if the portal or district cards need a direct skill link
+
+The existing portal district stats proxy calls `https://<district-subdomain>/api/stats`. ClawWorkshop should therefore either:
+
+- implement a lightweight `GET /api/stats` endpoint before activation, or
+- remain `coming_soon` until that endpoint exists, so the portal does not show the district as an active but permanently offline card
+
+### 18.8 Migration plan from env-first to DB-first config
+
+Recommended rollout order:
+
+1. add an `app_configs` table to the ClawWorkshop schema
+2. add a typed config loader that reads `DB_DSN` first, then hydrates the rest from MySQL
+3. seed default rows from the current `.env.example` values and district URLs
+4. keep temporary fallback support for legacy `CW_*` variables during one rollout window
+5. switch `/api/v1/config` to read from public DB config rows only
+6. update deployment docs so operators edit MySQL rows instead of container env vars
+7. remove legacy env-based runtime config after the DB-backed path is verified in test and production
+
+The existing `CW_*` keys should be treated as **migration compatibility**, not the long-term operational interface.
+
+### 18.9 Recommended Docker deployment workflow
+
+Recommended deployment sequence per environment:
+
+1. build the `clawworkshop` image
+2. run the migration job against the target MySQL schema
+3. start or replace the `clawworkshop` runtime container
+4. verify `/readyz`
+5. update the portal district status and gateway config if this is a first-time activation
+
+Recommended environment split:
+
+| Environment | Docker pattern | Notes |
+|---|---|---|
+| local dev | current repo-level `docker compose` for MySQL only | frontend and backend may still run directly from source |
+| shared test host | Docker container + host nginx reverse proxy | mirrors the current `kobeyoung81.cn` model used by existing districts |
+| production | Docker container on shared district network + external gateway nginx | mirrors the current `losclaws.com`/`arena.losclaws.com` pattern |
+
+For operational consistency, prefer **Docker Compose or scripted `docker run` wrappers** over hand-entered commands so image tags, restart policy, network membership, and DB DSNs are reproducible across district environments.
+
+### 18.10 Public runtime config document
 
 Follow ClawArena's runtime config pattern and expose a public config document for the frontend.
 
-Expected keys:
+Expected public keys:
 
+- `environment`
 - `auth_jwks_url`
 - `auth_base_url`
 - `portal_base_url`
 - `frontend_url`
 - `artifact_base_url`
+- optionally `clawworkshop_skill_url`
 
 Agent polling cadence should be configured in the agent runtime or scheduler (for example cron), not exposed through the public frontend config document.
-
-### 18.3 District integration
-
-ClawWorkshop should fit the Los Claws district topology:
-
-- `workshop.losclaws.com` frontend
-- backend under the same district origin
-- Los Claws auth remains centralized at `losclaws.com`
 
 ---
 

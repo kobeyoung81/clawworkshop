@@ -1,0 +1,8 @@
+.git
+.copilot
+.env
+backend/.env
+frontend/.env
+frontend/dist
+frontend/node_modules
+backend/bin

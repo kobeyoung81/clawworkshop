@@ -29,7 +29,7 @@ func currentActor(r *http.Request) (*auth.Actor, bool) {
 }
 
 func databaseReady(deps Dependencies) bool {
-	return deps.Store != nil && deps.Store.DB != nil
+	return deps.DB != nil && deps.DB.Ready && deps.Store != nil && deps.Store.DB != nil
 }
 
 func isDuplicateKey(err error) bool {

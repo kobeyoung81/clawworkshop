@@ -19,6 +19,7 @@ func NewRouter(deps Dependencies) http.Handler {
 	router.Use(chimiddleware.RequestID)
 	router.Use(chimiddleware.RealIP)
 	router.Use(chimiddleware.Timeout(60 * time.Second))
+	router.Use(limitRequestBody(deps.Config.HTTP.MaxBodyBytes))
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   deps.Config.HTTP.AllowedOrigins,
 		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete, http.MethodOptions},
@@ -35,6 +36,7 @@ func NewRouter(deps Dependencies) http.Handler {
 
 	router.Get("/healthz", deps.handleHealth)
 	router.Get("/readyz", deps.handleReady)
+	router.Get("/api/stats", deps.handleDistrictStats)
 
 	router.Route("/api/v1", func(r chi.Router) {
 		r.Get("/config", deps.handlePublicConfig)
@@ -144,4 +146,21 @@ func actorTypeFromContext(r *http.Request) string {
 	}
 
 	return string(actor.SubjectType)
+}
+
+func limitRequestBody(maxBytes int64) func(http.Handler) http.Handler {
+	if maxBytes <= 0 {
+		return func(next http.Handler) http.Handler { return next }
+	}
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodPost, http.MethodPut, http.MethodPatch:
+				r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
 }

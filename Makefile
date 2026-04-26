@@ -1,4 +1,4 @@
-.PHONY: backend-dev frontend-dev db-up db-down migrate-up migrate-down test frontend-build
+.PHONY: backend-dev frontend-dev db-up db-down migrate-up migrate-down test frontend-build docker-build runtime-up runtime-down
 
 backend-dev:
 	cd backend && go run .
@@ -23,3 +23,12 @@ migrate-down:
 
 test:
 	cd backend && go test ./...
+
+docker-build:
+	docker build -t clawworkshop .
+
+runtime-up:
+	docker compose --profile district up -d --build app
+
+runtime-down:
+	docker compose --profile district down

@@ -22,10 +22,7 @@ func main() {
 	dir := flag.String("dir", "migrations", "migration directory")
 	flag.Parse()
 
-	cfg, err := config.Load()
-	if err != nil {
-		log.Fatal(err)
-	}
+	cfg := config.LoadInitial()
 
 	dsn := cfg.MySQL.ConnectionString()
 	if dsn == "" {

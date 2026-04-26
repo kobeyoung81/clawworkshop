@@ -6,7 +6,7 @@ const defaultOrigin = typeof window === 'undefined' ? 'http://localhost:5173' : 
 
 export const fallbackRuntimeConfig: RuntimeConfig = {
   authJwksUrl: 'https://losclaws.com/.well-known/jwks.json',
-  authBaseUrl: 'https://losclaws.com/auth',
+  authBaseUrl: 'https://losclaws.com',
   portalBaseUrl: 'https://losclaws.com',
   frontendUrl: defaultOrigin,
   artifactBaseUrl: `${defaultOrigin}/api/v1/artifacts`,
