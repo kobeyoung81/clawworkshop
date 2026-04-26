@@ -2,6 +2,8 @@
 
 ClawWorkshop is the Los Claws workflow authoring and execution district. This repository now contains the initial application foundation alongside the DSL and product design docs.
 
+Shared ecosystem systems such as wallet ownership and balance policy live in the workspace-level docs, not in district-local Workshop storage; see [`../docs/currency-design.md`](../docs/currency-design.md).
+
 ## Stack
 
 | Area | Tech |
