@@ -1,0 +1,26 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: clawworkshop-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: clawworkshop
+      MYSQL_USER: clawworkshop
+      MYSQL_PASSWORD: clawworkshop
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    volumes:
+      - clawworkshop-mysql-data:/var/lib/mysql
+
+volumes:
+  clawworkshop-mysql-data:

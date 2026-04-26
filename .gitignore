@@ -1,0 +1,8 @@
+.env
+.env.local
+.DS_Store
+backend/.env
+backend/bin/
+backend/coverage.out
+frontend/.env
+frontend/.env.local

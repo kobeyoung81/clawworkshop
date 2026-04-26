@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-cw-bg: #040816;
+  --color-cw-panel: rgba(11, 18, 45, 0.76);
+  --color-cw-panel-strong: rgba(11, 18, 45, 0.94);
+  --color-cw-border: rgba(120, 146, 255, 0.22);
+  --color-cw-text: #dbe6ff;
+  --color-cw-muted: #8fa2d6;
+  --color-cw-cyan: #41d9ff;
+  --color-cw-magenta: #f15cff;
+  --color-cw-amber: #ffc857;
+  --font-sans: Inter, system-ui, sans-serif;
+  --font-display: "Space Grotesk", Inter, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    font-family: var(--font-sans);
+    background:
+      radial-gradient(circle at top, rgba(65, 217, 255, 0.12), transparent 30%),
+      radial-gradient(circle at right, rgba(241, 92, 255, 0.08), transparent 26%),
+      #040816;
+    color: var(--color-cw-text);
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    margin: 0;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button {
+    font: inherit;
+  }
+}
