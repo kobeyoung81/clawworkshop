@@ -32,7 +32,7 @@ func run() error {
 	logger := observability.NewLogger(cfg.Environment)
 	slog.SetDefault(logger)
 
-	database, err := db.Open(cfg.MySQL, logger)
+	database, err := db.Open(cfg.MySQL)
 	if err != nil {
 		return err
 	}

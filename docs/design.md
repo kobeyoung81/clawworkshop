@@ -1174,7 +1174,7 @@ Recommended gateway notes:
 
 ### 18.5 DB-centered config model
 
-ClawWorkshop currently uses `CW_*` environment variables as its primary runtime config source. To align with `losclaws` and `clawarena`, v1 should shift to a **DB-centered config model**:
+ClawWorkshop uses a **DB-centered config model** aligned with `losclaws` and `clawarena`:
 
 1. read only the database connection from environment variables
 2. connect to MySQL
@@ -1185,7 +1185,7 @@ ClawWorkshop currently uses `CW_*` environment variables as its primary runtime 
 
 Recommended rule:
 
-- **required env at steady state:** `DB_DSN` (or temporary compatibility with `CW_MYSQL_DSN`)
+- **required env at steady state:** `DB_DSN`
 - **all other district runtime settings:** stored in MySQL
 
 The recommended table shape should match the pattern already used by existing districts:
@@ -1240,19 +1240,14 @@ The existing portal district stats proxy calls `https://<district-subdomain>/api
 - implement a lightweight `GET /api/stats` endpoint before activation, or
 - remain `coming_soon` until that endpoint exists, so the portal does not show the district as an active but permanently offline card
 
-### 18.8 Migration plan from env-first to DB-first config
+### 18.8 Runtime config rollout notes
 
-Recommended rollout order:
+Current implementation notes:
 
-1. add an `app_configs` table to the ClawWorkshop schema
-2. add a typed config loader that reads `DB_DSN` first, then hydrates the rest from MySQL
-3. seed default rows from the current `.env.example` values and district URLs
-4. keep temporary fallback support for legacy `CW_*` variables during one rollout window
-5. switch `/api/v1/config` to read from public DB config rows only
-6. update deployment docs so operators edit MySQL rows instead of container env vars
-7. remove legacy env-based runtime config after the DB-backed path is verified in test and production
-
-The existing `CW_*` keys should be treated as **migration compatibility**, not the long-term operational interface.
+1. the backend reads only `DB_DSN` from environment variables
+2. the service seeds `app_configs` from built-in defaults on first startup
+3. `/api/v1/config` returns the public subset from database-backed config rows
+4. operators should update MySQL rows directly when preparing test or production environments
 
 ### 18.9 Recommended Docker deployment workflow
 
@@ -1268,11 +1263,11 @@ Recommended environment split:
 
 | Environment | Docker pattern | Notes |
 |---|---|---|
-| local dev | current repo-level `docker compose` for MySQL only | frontend and backend may still run directly from source |
+| local dev | local MySQL container or developer-managed MySQL | frontend and backend may still run directly from source |
 | shared test host | Docker container + host nginx reverse proxy | mirrors the current `kobeyoung81.cn` model used by existing districts |
 | production | Docker container on shared district network + external gateway nginx | mirrors the current `losclaws.com`/`arena.losclaws.com` pattern |
 
-For operational consistency, prefer **Docker Compose or scripted `docker run` wrappers** over hand-entered commands so image tags, restart policy, network membership, and DB DSNs are reproducible across district environments.
+For operational consistency, prefer **scripted `docker run` wrappers**, Make targets, or service manager units over hand-entered commands so image tags, restart policy, network membership, and DB DSNs are reproducible across district environments.
 
 ### 18.10 Public runtime config document
 

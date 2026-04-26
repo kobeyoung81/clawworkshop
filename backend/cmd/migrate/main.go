@@ -26,7 +26,7 @@ func main() {
 
 	dsn := cfg.MySQL.ConnectionString()
 	if dsn == "" {
-		log.Fatal("mysql configuration is required to run migrations")
+		log.Fatal("DB_DSN is required to run migrations")
 	}
 
 	sqlDB, err := sql.Open("mysql", dsn)

@@ -30,20 +30,22 @@ ClawWorkshop is the Los Claws workflow authoring and execution district. This re
 4. Start the API with `make backend-dev`.
 5. Start the frontend with `make frontend-dev`.
 
+`.env.example` now contains only the required `DB_DSN`. The default frontend dev workflow uses the Vite proxy, so no frontend env vars are needed unless you want to override the API origin manually.
+
 The frontend expects the API at `http://localhost:8080` by default and proxies `/api`, `/healthz`, and `/readyz` during local development.
 
 ## Runtime config model
 
 ClawWorkshop now follows the same **DB-backed config** pattern as Los Claws mainsite and ClawArena:
 
-1. the service reads `DB_DSN` (or legacy `CW_MYSQL_DSN`) from env
+1. the service reads `DB_DSN` from env
 2. connects to MySQL
 3. ensures the `app_configs` table exists
-4. seeds missing config rows from bootstrap env values
+4. seeds missing config rows from built-in defaults
 5. loads typed runtime config from MySQL
 6. exposes the public subset through `GET /api/v1/config`
 
-Steady-state deployment should keep only the database connection in container env. Runtime values such as `auth_base_url`, `portal_base_url`, `frontend_url`, and `artifact_base_url` should be managed in MySQL.
+Steady-state deployment keeps only the database connection in container env. Runtime values such as `auth_base_url`, `portal_base_url`, `frontend_url`, and `artifact_base_url` should be managed in MySQL through `app_configs`.
 
 ## Docker district runtime
 
@@ -52,13 +54,15 @@ ClawWorkshop now ships with a district-style monolith Docker runtime:
 - `Dockerfile` builds the React frontend and Go backend, then assembles nginx + supervisord + backend binaries
 - `docker/nginx.conf` serves the SPA and proxies `/api/`, `/healthz`, and `/readyz`
 - `docker/supervisord.conf` runs nginx and the Go API together
-- `docker-compose.yml` includes `mysql`, a one-shot `migrate` service, and an `app` runtime profile
+- `make db-up` starts a local MySQL container for development without Docker Compose
+- `make runtime-up` builds the image and runs the monolith container with `DB_DSN`
 
 Useful commands:
 
 1. `make docker-build`
-2. `make runtime-up`
-3. `make runtime-down`
+2. `make db-up`
+3. `make runtime-up`
+4. `make runtime-down`
 
 The runtime container exposes port `80` internally, which matches the existing Los Claws district gateway pattern.
 

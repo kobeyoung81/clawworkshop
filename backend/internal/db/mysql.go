@@ -2,8 +2,8 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
-	"log/slog"
 	"time"
 
 	mysqlDriver "gorm.io/driver/mysql"
@@ -20,29 +20,17 @@ type Connection struct {
 	ReadyError string
 }
 
-func Open(cfg config.MySQLConfig, log *slog.Logger) (*Connection, error) {
+func Open(cfg config.MySQLConfig) (*Connection, error) {
 	dsn := cfg.ConnectionString()
 	if dsn == "" {
-		log.Warn("mysql configuration missing; readiness will remain false")
-		return &Connection{
-			Ready:      false,
-			ReadyError: "mysql configuration is incomplete",
-		}, nil
+		return nil, errors.New("DB_DSN is required")
 	}
 
 	gormDB, err := gorm.Open(mysqlDriver.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	if err != nil {
-		if cfg.Required {
-			return nil, fmt.Errorf("open mysql: %w", err)
-		}
-
-		log.Warn("mysql unavailable during startup", "error", err)
-		return &Connection{
-			Ready:      false,
-			ReadyError: err.Error(),
-		}, nil
+		return nil, fmt.Errorf("open mysql: %w", err)
 	}
 
 	sqlDB, err := gormDB.DB()
@@ -55,17 +43,7 @@ func Open(cfg config.MySQLConfig, log *slog.Logger) (*Connection, error) {
 	sqlDB.SetMaxOpenConns(25)
 
 	if err := sqlDB.Ping(); err != nil {
-		if cfg.Required {
-			return nil, fmt.Errorf("ping mysql: %w", err)
-		}
-
-		log.Warn("mysql ping failed during startup", "error", err)
-		return &Connection{
-			Gorm:       gormDB,
-			SQL:        sqlDB,
-			Ready:      false,
-			ReadyError: err.Error(),
-		}, nil
+		return nil, fmt.Errorf("ping mysql: %w", err)
 	}
 
 	return &Connection{
