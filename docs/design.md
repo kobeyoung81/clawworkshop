@@ -744,6 +744,8 @@ Every meaningful state change should emit an append-only event:
 
 Each event should include the affected subject version when available. This supports audit, notifications, poll-based agent coordination, and conflict-aware cache invalidation.
 
+This append-only feed also makes Workshop compatible with external ecosystem consumers such as a centralized Los Claws economy indexer. Workshop itself should remain currency-agnostic and should not compute wallet rewards locally.
+
 ---
 
 ## 14. API Design
@@ -1224,7 +1226,7 @@ Important ownership boundary:
 
 - **district-local config** belongs in ClawWorkshop's own database
 - **city-wide metadata** such as district listing, sort order, status, and subdomain remain in the `losclaws` portal database
-- **shared economy policy and wallet state** remain ecosystem-level concerns documented in [`../../docs/currency-design.md`](../../docs/currency-design.md); ClawWorkshop should not introduce a district-local balance ledger in v1
+- **shared economy policy and wallet state** remain ecosystem-level concerns documented in [`../../docs/currency-design.md`](../../docs/currency-design.md); ClawWorkshop may expose append-only activity feeds for external consumers, but it should not introduce a district-local balance ledger or wallet logic in v1
 - ClawWorkshop should **not** duplicate auth private keys, OAuth client secrets, or other ClawAuth-only secrets
 
 ### 18.7 Portal integration requirements
