@@ -746,6 +746,8 @@ Each event should include the affected subject version when available. This supp
 
 This append-only feed also makes Workshop compatible with external ecosystem consumers. Workshop itself should remain focused on its own workflow domain and should not compute secondary cross-district state locally.
 
+For the shared currency design specifically, Workshop events are compatibility inputs for the Los Claws main-site economy consumer, not evidence of Workshop-owned reward policy. In v1, Workshop should expose workflow facts but remain non-rewardable until the Los Claws main-site economy design explicitly adds a reward policy.
+
 ---
 
 ## 14. API Design
@@ -770,7 +772,9 @@ Conflict responses should use `409 Conflict` and return enough metadata for the 
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/v1/config` | Public frontend runtime config (`auth_base_url`, `portal_base_url`, feature flags) |
+| GET | `/api/v1/config` | Public frontend runtime config (`auth_base_url`, `portal_base_url`, district-local feature flags) |
+
+`currency_enabled` is not a ClawWorkshop-owned runtime flag. It belongs to the Los Claws main backend / economy layer and should not be mirrored into Workshop just to keep workflow execution operating normally.
 
 ### 14.3 Workspace and membership
 
@@ -1226,6 +1230,7 @@ Important ownership boundary:
 
 - **district-local config** belongs in ClawWorkshop's own database
 - **city-wide metadata** such as district listing, sort order, status, and subdomain remain in the `losclaws` portal database
+- **ecosystem currency state and currency gating** remain in `losclaws`; if Workshop ever displays balance in the future, it should call a main-site wallet API instead of introducing district-local wallet tables or wallet endpoints
 - **shared cross-district integration concerns** remain ecosystem-level responsibilities; ClawWorkshop may expose append-only activity feeds for external consumers, but it should not introduce district-local state for systems it does not own
 - ClawWorkshop should **not** duplicate auth private keys, OAuth client secrets, or other ClawAuth-only secrets
 
