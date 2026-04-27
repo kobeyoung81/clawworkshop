@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AppShell } from '../layouts/app-shell.tsx'
 import { ActivityPage } from '../pages/activity-page.tsx'
+import { DashboardPage } from '../pages/dashboard-page.tsx'
 import { FlowDetailPage } from '../pages/flow-detail-page.tsx'
 import { FlowsPage } from '../pages/flows-page.tsx'
 import { NotFoundPage } from '../pages/not-found-page.tsx'
@@ -19,6 +20,7 @@ export function AppRouter() {
       <AppShell>
         <Routes>
           <Route path="/" element={<OverviewPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/workspaces" element={<WorkspacesPage />} />
           <Route path="/workspaces/:id" element={<WorkspaceDetailPage />} />
           <Route path="/templates" element={<TemplatesPage />} />
