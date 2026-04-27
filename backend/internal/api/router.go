@@ -28,17 +28,18 @@ func NewRouter(deps Dependencies) http.Handler {
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
-	if deps.Auth != nil {
-		router.Use(deps.Auth.Optional)
-	}
 	router.Use(requestLogger(deps))
 	router.Use(recoverer(deps))
 
 	router.Get("/healthz", deps.handleHealth)
 	router.Get("/readyz", deps.handleReady)
 	router.Get("/api/stats", deps.handleDistrictStats)
+	router.Get("/internal/v1/activity-feed", deps.handleInternalActivityFeed)
 
 	router.Route("/api/v1", func(r chi.Router) {
+		if deps.Auth != nil {
+			r.Use(deps.Auth.Optional)
+		}
 		r.Get("/config", deps.handlePublicConfig)
 		if deps.Auth != nil {
 			r.With(deps.Auth.Require).Get("/auth/me", deps.handleCurrentActor)

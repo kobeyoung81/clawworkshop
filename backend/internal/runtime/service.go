@@ -1445,8 +1445,12 @@ func maybeEmitFlowCompleted(tx *gorm.DB, flowID string, workflow authoring.Workf
 		SubjectVersion: flow.Version,
 		ActorID:        actorID,
 		Payload: map[string]any{
-			"workflowKey": workflow.ID,
-			"status":      flow.Status,
+			"workspace_id":          project.WorkspaceID,
+			"project_id":            project.ID,
+			"flow_id":               flow.ID,
+			"completed_by_auth_uid": actorID,
+			"workflow_key":          workflow.ID,
+			"status":                flow.Status,
 		},
 	})
 }

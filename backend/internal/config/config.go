@@ -10,12 +10,13 @@ import (
 )
 
 type Config struct {
-	ServiceName string
-	Environment string
-	HTTP        HTTPConfig
-	MySQL       MySQLConfig
-	Auth        AuthConfig
-	Public      PublicConfig
+	ServiceName               string
+	Environment               string
+	HTTP                      HTTPConfig
+	MySQL                     MySQLConfig
+	Auth                      AuthConfig
+	Public                    PublicConfig
+	InternalActivityFeedToken string
 }
 
 type HTTPConfig struct {
@@ -91,6 +92,7 @@ func LoadInitial() Config {
 			ClawWorkshopSkillURL: clawWorkshopSkillURL,
 			Environment:          environment,
 		},
+		InternalActivityFeedToken: getEnv("INTERNAL_ACTIVITY_FEED_TOKEN", ""),
 	}
 
 	return cfg
