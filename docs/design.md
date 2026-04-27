@@ -843,153 +843,63 @@ For v1, agent work can still be handled through the main authenticated APIs if r
 
 ## 15. Frontend Information Architecture
 
-### 15.1 Top-level navigation
+**Note:** Detailed UI design, mockups, and component specifications are documented in `ui-design.md`.
 
-Recommended navigation:
+### 15.1 Navigation Structure
 
-- **Overview**
-- **Workspaces**
-- **Templates**
-- **Projects**
-- **Flows**
-- **Activity**
+**Hierarchy:** Workspace → Projects → Workflows → Tasks
 
-Navbar behavior should mirror ClawArena:
+**Navigation Components:**
+- Workspace switcher in navbar (dropdown)
+- Breadcrumbs for current path and upward navigation
+- No sidebar - full width layout respects parent-child hierarchy
 
-- Los Claws brand linkage
-- EN/ZH toggle
-- system status badge
-- signed-in user/account link
-- portal sign-in redirect
-
-### 15.2 Core pages
+### 15.2 Core Pages
 
 | Route | Purpose |
 |---|---|
-| `/` | District landing / personal overview |
+| `/` | Overview (cross-workspace landing) |
+| `/dashboard` | Personal dashboard (user's tasks and stats) |
 | `/workspaces` | Workspace list |
-| `/workspaces/:id` | Workspace dashboard |
-| `/workspaces/:id/templates` | Template library |
-| `/templates/:id` | Draft template editor/detail |
+| `/workspaces/:id` | Workspace detail (shows projects) |
+| `/projects/:id` | Project detail (shows workflows) |
+| `/flows/:id` | Flow detail (artifacts, comments, logs) |
+| `/templates` | Template list |
+| `/templates/:id` | Template editor |
 | `/templates/:id/versions/:versionId` | Published version detail |
-| `/projects` | Project list |
-| `/projects/:id` | Project overview |
-| `/flows` | Flow list |
-| `/flows/:id` | Flow detail with graph, assignments, artifacts, and activity |
 | `/artifacts/:id` | Artifact detail and revision history |
+| `/activity` | Activity feed |
 
-### 15.3 Template authoring UX
+### 15.3 Key Design Decisions
 
-v1 should prioritize correctness over flashy editing:
+**Dashboard:**
+- Personal workspace showing assigned tasks
+- Focus on actionable items requiring user attention
+- Quick access to pending work
 
-- structured form/editor panels
-- JSON source panel
-- graph visualization
-- validation results panel
-- publish action with diff/summary
+**Flow Page:**
+- Artifacts tab is default view (not graph)
+- Workflow graph available via modal popup
+- Emphasis on artifacts, comments, and logs as primary interaction
 
-Graph visualization should be first-class. Full drag-and-drop graph editing can come later.
+**Template Editor:**
+- Monaco Editor for JSON editing
+- Live validation panel
+- Graph visualization available
+- Publish action with validation
 
-### 15.4 Runtime UX
+### 15.4 Frontend Stack
 
-Project and flow pages should emphasize:
+Reuse ClawArena frontend stack:
+- React 19, TypeScript, Vite 7
+- Tailwind CSS v4
+- TanStack Query
+- React Router v7
+- i18next (EN/ZH)
 
-- current status
-- ready/blocked work
-- assignment ownership
-- claim ownership and stale state visibility
-- artifact freshness
-- pending approvals
-- recent activity
+See `ui-design.md` for complete design specifications, mockups, color palette, typography, and component library.
 
-### 15.5 Screen blueprints
 
-The following wireframes are intentionally low-fidelity. They exist to make the product shape concrete inside the design doc and to show where concurrency-aware feedback belongs in the UI.
-
-#### Workspace dashboard
-
-```text
-+--------------------------------------------------------------------------------------------------+
-| Navbar: Los Claws | Workspaces | Templates | Projects | Flows | Activity | EN/ZH | User Menu    |
-+--------------------------------------------------------------------------------------------------+
-| Workspace: Moonforge Studio                                      [Invite] [New Template] [New Project] |
-| Members 18 | Active Projects 6 | Ready Tasks 9 | Waiting Reviews 3 | Active Agents 7            |
-+--------------------------------------+--------------------------------------+----------------------+
-| Templates needing attention          | Ready tasks to claim                 | Activity              |
-| - Website Launch (draft v12)         | - PRD / draft_prd    [Claim]         | 22:31 Task claimed    |
-| - API Workflow (validation warning)  | - UX / review_copy   [Open]          | 22:27 Review closed   |
-| - Agent Onboarding (published v4)    | - Docs / wireframe   [Claim]         | 22:18 Artifact rev 8  |
-+--------------------------------------+--------------------------------------+----------------------+
-| Workspace members and agents                                                            [Manage] |
-| owner: alice | admin: kai | member: may | member(agent): wolf-07 | member: lina             |
-+--------------------------------------------------------------------------------------------------+
-```
-
-#### Template editor and validator
-
-```text
-+--------------------------------------------------------------------------------------------------+
-| Template: website-launch                          Draft v12  [Validate] [Publish] [Compare v11] |
-| Status: editable                                                                   last saved 2m |
-| Warning: Another editor published v11 after you loaded this draft. Refresh before publishing.   |
-+---------------------------+--------------------------------------------+-------------------------+
-| Outline / graph nav       | Form + JSON editor                         | Validation panel        |
-| - metadata                | title: Website Launch                      | Errors: 1               |
-| - roles                   | description: ...                           | Warnings: 2             |
-| - artifacts               | current_draft_json                         | - artifact id conflict  |
-| - workflows               | {                                          | - missing reviewer role |
-|   - discovery             |   "workflows": [...]                       |                         |
-|   - prd                   | }                                          | [Re-run validation]     |
-+---------------------------+--------------------------------------------+-------------------------+
-| Graph preview                                                                                     |
-| [input] --> [draft_prd] --> [review_prd] --approved--> [end]                                     |
-|                                  \\--revise--> [revise_prd] ----------------------------------/   |
-+--------------------------------------------------------------------------------------------------+
-```
-
-#### Project overview
-
-```text
-+--------------------------------------------------------------------------------------------------+
-| Project: Lunar Portal Refresh                     Status: Active                      [Start Flow] |
-| Template: website-launch v4 | Workspace: Moonforge Studio | Versioned project state: v9          |
-+--------------------------------------+--------------------------------------+----------------------+
-| Open flows                            | Participants                         | Recent artifacts      |
-| - Discovery flow #1  Active          | maintainer: kai                      | brief.md   rev 3      |
-| - PRD flow #1        Blocked: review | reviewer: may                        | prd.md     rev 8      |
-| - UX flow #1         Pending         | worker(agent): wolf-07               | copy.md    rev 2      |
-+--------------------------------------+--------------------------------------+----------------------+
-| Project health                                                                                   |
-| Ready tasks 2 | Claimed tasks 1 | Pending reviews 1 | Last event seq 10442                       |
-+--------------------------------------------------------------------------------------------------+
-```
-
-#### Flow detail
-
-```text
-+--------------------------------------------------------------------------------------------------+
-| Flow: PRD Workflow / #1                          Status: Active                  [Refresh State] |
-| Conflict banner (conditional): This flow changed since your last action. Reloaded to version 27. |
-+------------------------------+--------------------------------------+----------------------------+
-| Graph / lanes                | Active task                          | Activity / events          |
-| [brief] -> [draft_prd]       | task: draft_prd                      | seq 10442 task_claimed     |
-|              |               | state: ready                         | seq 10443 artifact_rev     |
-|              v               | assignment: wolf-07                  | seq 10444 review_opened    |
-|         [review_prd] -> end  | task version: 17                     | seq 10445 review_decided   |
-|                              | artifact deps: brief.md              |                            |
-|                              | [Claim Task] [Open Artifact]         |                            |
-+------------------------------+--------------------------------------+----------------------------+
-| Ready queue / blockers                                                                            |
-| - review_prd blocked on prd.md rev 8 approval                                                     |
-| - copy_brief ready, no assignee                                                                   |
-+--------------------------------------------------------------------------------------------------+
-```
-
-#### Artifact detail and review surface
-
-```text
-+--------------------------------------------------------------------------------------------------+
-| Artifact: prd.md                               Current revision: 8               [Diff vs 7]     |
 | Review session: open / session v3 / task from node draft_prd                                 [Submit] |
 | Conditional banner: Your review form is stale. Session moved to version 4 after another decision. |
 +--------------------------------------+--------------------------------------+----------------------+
