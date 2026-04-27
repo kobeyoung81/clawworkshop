@@ -4,6 +4,7 @@ import { createWorkspace, listWorkspaces } from '../api/workspaces.ts'
 import { ApiError } from '../api/http.ts'
 import type { FormEvent } from 'react'
 import { useState } from 'react'
+import { GlassPanel } from '../components/effects/GlassPanel'
 
 export function WorkspacesPage() {
   const queryClient = useQueryClient()
@@ -39,87 +40,89 @@ export function WorkspacesPage() {
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_380px]">
-      <section className="rounded-[24px] border border-cw-border bg-cw-panel p-6 backdrop-blur">
-        <p className="font-mono text-xs uppercase tracking-[0.25em] text-cw-cyan">Workspace surface</p>
-        <h2 className="mt-3 font-display text-3xl font-semibold text-white">Visible workspaces</h2>
-        <p className="mt-3 text-sm text-cw-muted">
-          Create a workspace, inspect your membership role, and drill into member management.
-        </p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="font-display text-3xl font-bold">Workspaces</h1>
+      </div>
 
-        <div className="mt-6 space-y-3">
-          {workspacesQuery.data?.map((workspace) => (
-            <Link
-              key={workspace.id}
-              to={`/workspaces/${workspace.id}`}
-              className="flex items-center justify-between rounded-2xl border border-cw-border bg-white/5 px-4 py-4 transition hover:border-cw-cyan/30"
-            >
+      <div className="space-y-4">
+        {workspacesQuery.data?.map((workspace) => (
+          <GlassPanel key={workspace.id} accent="none" className="p-6">
+            <div className="flex items-start justify-between">
               <div>
-                <p className="font-display text-lg font-medium text-white">{workspace.name}</p>
-                <p className="text-sm text-cw-muted">
+                <h2 className="mb-2 font-display text-xl font-semibold">🏢 {workspace.name}</h2>
+                <p className="mb-4 text-sm text-cw-text-muted">
                   {workspace.slug} · {workspace.defaultLocale}
                 </p>
+                <Link
+                  to={`/workspaces/${workspace.id}`}
+                  className="text-sm text-cw-cyan hover:underline"
+                >
+                  Open Workspace →
+                </Link>
               </div>
-              <span className="rounded-full border border-cw-magenta/30 bg-cw-magenta/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-cw-magenta">
+              <span className="rounded-full border border-cw-purple/30 bg-cw-purple/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-cw-purple">
                 {workspace.actorRole ?? 'member'}
               </span>
-            </Link>
-          ))}
-          {workspacesQuery.isLoading ? (
-            <div className="rounded-2xl border border-cw-border bg-white/5 px-4 py-6 text-sm text-cw-muted">
-              Loading workspaces...
             </div>
-          ) : null}
-          {workspacesQuery.data?.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-cw-border px-4 py-6 text-sm text-cw-muted">
-              No workspaces yet.
-            </div>
-          ) : null}
-        </div>
-      </section>
+          </GlassPanel>
+        ))}
+        {workspacesQuery.isLoading && (
+          <GlassPanel accent="none" className="p-6">
+            <p className="text-sm text-cw-text-muted">Loading workspaces...</p>
+          </GlassPanel>
+        )}
+        {workspacesQuery.data?.length === 0 && (
+          <GlassPanel accent="none" className="border-dashed p-6">
+            <p className="text-sm text-cw-text-muted">No workspaces yet.</p>
+          </GlassPanel>
+        )}
+      </div>
 
-      <section className="rounded-[24px] border border-cw-border bg-cw-panel p-6 backdrop-blur">
-        <p className="font-mono text-xs uppercase tracking-[0.25em] text-cw-amber">Create workspace</p>
-        <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
-          <label className="block">
-            <span className="mb-2 block text-sm text-cw-muted">Name</span>
+      <GlassPanel accent="cyan" className="p-6">
+        <h3 className="mb-4 font-display text-lg font-semibold">Create New Workspace</h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium">Slug</label>
             <input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              className="w-full rounded-2xl border border-cw-border bg-white/5 px-4 py-3 text-white outline-none ring-0 transition focus:border-cw-cyan/40"
-              placeholder="Moonforge Studio"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-2 block text-sm text-cw-muted">Slug</span>
-            <input
+              type="text"
               value={slug}
-              onChange={(event) => setSlug(event.target.value)}
-              className="w-full rounded-2xl border border-cw-border bg-white/5 px-4 py-3 text-white outline-none ring-0 transition focus:border-cw-cyan/40"
-              placeholder="moonforge-studio"
+              onChange={(e) => setSlug(e.target.value)}
+              className="w-full rounded-lg border border-cw-border bg-cw-bg px-3 py-2 text-sm"
+              required
             />
-          </label>
-          <label className="block">
-            <span className="mb-2 block text-sm text-cw-muted">Default locale</span>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full rounded-lg border border-cw-border bg-cw-bg px-3 py-2 text-sm"
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">Default Locale</label>
             <select
               value={defaultLocale}
-              onChange={(event) => setDefaultLocale(event.target.value)}
-              className="w-full rounded-2xl border border-cw-border bg-white/5 px-4 py-3 text-white outline-none ring-0 transition focus:border-cw-cyan/40"
+              onChange={(e) => setDefaultLocale(e.target.value)}
+              className="w-full rounded-lg border border-cw-border bg-cw-bg px-3 py-2 text-sm"
             >
               <option value="en">English</option>
-              <option value="zh-CN">简体中文</option>
+              <option value="zh">中文</option>
             </select>
-          </label>
-          {formError ? <p className="text-sm text-amber-200">{formError}</p> : null}
+          </div>
+          {formError && <p className="text-sm text-cw-error">{formError}</p>}
           <button
             type="submit"
             disabled={createWorkspaceMutation.isPending}
-            className="inline-flex rounded-full border border-cw-cyan/30 bg-cw-cyan/10 px-4 py-2 text-sm font-medium text-cw-cyan transition hover:bg-cw-cyan/20 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-full bg-cw-cyan px-6 py-2 font-semibold text-cw-bg transition hover:bg-cw-cyan/90 disabled:opacity-50"
           >
-            {createWorkspaceMutation.isPending ? 'Creating...' : 'Create workspace'}
+            {createWorkspaceMutation.isPending ? 'Creating...' : 'Create Workspace'}
           </button>
         </form>
-      </section>
+      </GlassPanel>
     </div>
   )
 }
