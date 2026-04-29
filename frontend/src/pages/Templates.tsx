@@ -6,7 +6,7 @@ import { ApiError } from '../api/http.ts'
 import { createProjectType, listProjectTypes } from '../api/project-types.ts'
 import { listWorkspaces } from '../api/workspaces.ts'
 
-export function TemplatesPage() {
+export function Templates() {
   const queryClient = useQueryClient()
   const [workspaceId, setWorkspaceId] = useState('')
   const [key, setKey] = useState('')

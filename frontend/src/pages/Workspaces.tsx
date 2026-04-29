@@ -6,7 +6,7 @@ import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { GlassPanel } from '../components/effects/GlassPanel'
 
-export function WorkspacesPage() {
+export function Workspaces() {
   const queryClient = useQueryClient()
   const [slug, setSlug] = useState('')
   const [name, setName] = useState('')

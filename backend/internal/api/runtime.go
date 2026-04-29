@@ -966,6 +966,7 @@ func (d Dependencies) handleListEvents(w http.ResponseWriter, r *http.Request) {
 		WorkspaceID: strings.TrimSpace(r.URL.Query().Get("workspaceId")),
 		ProjectID:   strings.TrimSpace(r.URL.Query().Get("projectId")),
 		FlowID:      strings.TrimSpace(r.URL.Query().Get("flowId")),
+		Order:       strings.TrimSpace(strings.ToLower(r.URL.Query().Get("order"))),
 	}
 	if raw := strings.TrimSpace(r.URL.Query().Get("sinceSeq")); raw != "" {
 		if parsed, err := strconv.ParseInt(raw, 10, 64); err == nil {
@@ -976,6 +977,9 @@ func (d Dependencies) handleListEvents(w http.ResponseWriter, r *http.Request) {
 		if parsed, err := strconv.Atoi(raw); err == nil {
 			params.Limit = parsed
 		}
+	}
+	if params.Order != "desc" {
+		params.Order = "asc"
 	}
 
 	if err := d.authorizeEventScope(r.Context(), actor, params); err != nil {

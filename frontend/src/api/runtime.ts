@@ -219,6 +219,7 @@ export interface EventListParams {
   flowId?: string
   sinceSeq?: number
   limit?: number
+  order?: 'asc' | 'desc'
 }
 
 export async function listProjects() {
@@ -350,6 +351,9 @@ export async function listEvents(params: EventListParams = {}) {
   }
   if (typeof params.limit === 'number') {
     query.set('limit', String(params.limit))
+  }
+  if (params.order) {
+    query.set('order', params.order)
   }
 
   const suffix = query.toString() === '' ? '' : `?${query.toString()}`

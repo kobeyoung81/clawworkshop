@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { FormEvent } from 'react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ApiError } from '../api/http.ts'
 import {
@@ -12,12 +12,9 @@ import {
   type ValidateProjectTypeResponse,
 } from '../api/project-types.ts'
 
-export function TemplateDetailPage() {
+export function TemplateDetail() {
   const { id = '' } = useParams()
   const queryClient = useQueryClient()
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [draftText, setDraftText] = useState('{}')
   const [formMessage, setFormMessage] = useState<string | null>(null)
   const [validationResponse, setValidationResponse] = useState<ValidateProjectTypeResponse | null>(null)
   const projectTypeQuery = useQuery({
@@ -30,16 +27,6 @@ export function TemplateDetailPage() {
     queryFn: () => listProjectTypeVersions(id),
     enabled: id !== '',
   })
-
-  useEffect(() => {
-    if (!projectTypeQuery.data) {
-      return
-    }
-
-    setTitle(projectTypeQuery.data.title)
-    setDescription(projectTypeQuery.data.description)
-    setDraftText(JSON.stringify(projectTypeQuery.data.currentDraftJson, null, 2))
-  }, [projectTypeQuery.data])
 
   const saveMutation = useMutation({
     mutationFn: ({
@@ -98,29 +85,6 @@ export function TemplateDetailPage() {
     },
   })
 
-  function handleSave(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!projectTypeQuery.data) {
-      return
-    }
-
-    try {
-      const draftJson = JSON.parse(draftText) as Record<string, unknown>
-      setFormMessage(null)
-      saveMutation.mutate({
-        projectTypeId: id,
-        input: {
-          title,
-          description,
-          draftJson,
-          expectedVersion: projectTypeQuery.data.version,
-        },
-      })
-    } catch {
-      setFormMessage('Draft JSON must be valid JSON.')
-    }
-  }
-
   const projectType = projectTypeQuery.data
 
   return (
@@ -138,70 +102,44 @@ export function TemplateDetailPage() {
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_360px]">
-        <form className="space-y-6 rounded-[24px] border border-cw-border bg-cw-panel p-6 backdrop-blur" onSubmit={handleSave}>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="block">
-              <span className="mb-2 block text-sm text-cw-muted">Title</span>
-              <input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                className="w-full rounded-2xl border border-cw-border bg-white/5 px-4 py-3 text-white outline-none transition focus:border-cw-cyan/40"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-2 block text-sm text-cw-muted">Description</span>
-              <input
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                className="w-full rounded-2xl border border-cw-border bg-white/5 px-4 py-3 text-white outline-none transition focus:border-cw-cyan/40"
-              />
-            </label>
-          </div>
-
-          <label className="block">
-            <span className="mb-2 block text-sm text-cw-muted">current_draft_json</span>
-            <textarea
-              value={draftText}
-              onChange={(event) => setDraftText(event.target.value)}
-              rows={24}
-              className="min-h-[520px] w-full rounded-[24px] border border-cw-border bg-cw-panel-strong px-4 py-4 font-mono text-sm text-cw-text outline-none transition focus:border-cw-magenta/40"
-            />
-          </label>
-
-          {formMessage ? <p className="text-sm text-amber-200">{formMessage}</p> : null}
-
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="submit"
-              disabled={saveMutation.isPending || !projectType}
-              className="inline-flex rounded-full border border-cw-cyan/30 bg-cw-cyan/10 px-4 py-2 text-sm font-medium text-cw-cyan transition hover:bg-cw-cyan/20 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {saveMutation.isPending ? 'Saving...' : 'Save draft'}
-            </button>
-            <button
-              type="button"
-              disabled={validateMutation.isPending || !projectType}
-              onClick={() => projectType && validateMutation.mutate(projectType.id)}
-              className="inline-flex rounded-full border border-cw-amber/30 bg-cw-amber/10 px-4 py-2 text-sm font-medium text-cw-amber transition hover:bg-cw-amber/20 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {validateMutation.isPending ? 'Validating...' : 'Validate'}
-            </button>
-            <button
-              type="button"
-              disabled={publishMutation.isPending || !projectType}
-              onClick={() =>
-                projectType &&
-                publishMutation.mutate({
-                  projectTypeId: projectType.id,
-                  expectedVersion: projectType.version,
+        {projectType ? (
+          <TemplateEditorForm
+            key={`${projectType.id}:${projectType.version}`}
+            projectType={projectType}
+            formMessage={formMessage}
+            savePending={saveMutation.isPending}
+            validatePending={validateMutation.isPending}
+            publishPending={publishMutation.isPending}
+            onSave={(title, description, draftText) => {
+              try {
+                const draftJson = JSON.parse(draftText) as Record<string, unknown>
+                setFormMessage(null)
+                saveMutation.mutate({
+                  projectTypeId: id,
+                  input: {
+                    title,
+                    description,
+                    draftJson,
+                    expectedVersion: projectType.version,
+                  },
                 })
+              } catch {
+                setFormMessage('Draft JSON must be valid JSON.')
               }
-              className="inline-flex rounded-full border border-cw-magenta/30 bg-cw-magenta/10 px-4 py-2 text-sm font-medium text-cw-magenta transition hover:bg-cw-magenta/20 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {publishMutation.isPending ? 'Publishing...' : 'Publish'}
-            </button>
-          </div>
-        </form>
+            }}
+            onValidate={() => validateMutation.mutate(projectType.id)}
+            onPublish={() =>
+              publishMutation.mutate({
+                projectTypeId: projectType.id,
+                expectedVersion: projectType.version,
+              })
+            }
+          />
+        ) : (
+          <form className="space-y-6 rounded-[24px] border border-cw-border bg-cw-panel p-6 backdrop-blur">
+            <p className="text-sm text-cw-muted">Loading draft editor...</p>
+          </form>
+        )}
 
         <aside className="space-y-6">
           <section className="rounded-[24px] border border-cw-border bg-cw-panel p-6 backdrop-blur">
@@ -255,5 +193,100 @@ export function TemplateDetailPage() {
         </aside>
       </div>
     </div>
+  )
+}
+
+function TemplateEditorForm({
+  projectType,
+  formMessage,
+  savePending,
+  validatePending,
+  publishPending,
+  onSave,
+  onValidate,
+  onPublish,
+}: {
+  projectType: {
+    id: string
+    title: string
+    description: string
+    currentDraftJson: Record<string, unknown>
+  }
+  formMessage: string | null
+  savePending: boolean
+  validatePending: boolean
+  publishPending: boolean
+  onSave: (title: string, description: string, draftText: string) => void
+  onValidate: () => void
+  onPublish: () => void
+}) {
+  const [title, setTitle] = useState(projectType.title)
+  const [description, setDescription] = useState(projectType.description)
+  const [draftText, setDraftText] = useState(JSON.stringify(projectType.currentDraftJson, null, 2))
+
+  function handleSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    onSave(title, description, draftText)
+  }
+
+  return (
+    <form className="space-y-6 rounded-[24px] border border-cw-border bg-cw-panel p-6 backdrop-blur" onSubmit={handleSave}>
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="block">
+          <span className="mb-2 block text-sm text-cw-muted">Title</span>
+          <input
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            className="w-full rounded-2xl border border-cw-border bg-white/5 px-4 py-3 text-white outline-none transition focus:border-cw-cyan/40"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-2 block text-sm text-cw-muted">Description</span>
+          <input
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            className="w-full rounded-2xl border border-cw-border bg-white/5 px-4 py-3 text-white outline-none transition focus:border-cw-cyan/40"
+          />
+        </label>
+      </div>
+
+      <label className="block">
+        <span className="mb-2 block text-sm text-cw-muted">current_draft_json</span>
+        <textarea
+          value={draftText}
+          onChange={(event) => setDraftText(event.target.value)}
+          rows={24}
+          className="min-h-[520px] w-full rounded-[24px] border border-cw-border bg-cw-panel-strong px-4 py-4 font-mono text-sm text-cw-text outline-none transition focus:border-cw-magenta/40"
+        />
+      </label>
+
+      {formMessage ? <p className="text-sm text-amber-200">{formMessage}</p> : null}
+
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="submit"
+          disabled={savePending}
+          className="inline-flex rounded-full border border-cw-cyan/30 bg-cw-cyan/10 px-4 py-2 text-sm font-medium text-cw-cyan transition hover:bg-cw-cyan/20 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {savePending ? 'Saving...' : 'Save draft'}
+        </button>
+        <button
+          type="button"
+          disabled={validatePending}
+          onClick={onValidate}
+          className="inline-flex rounded-full border border-cw-amber/30 bg-cw-amber/10 px-4 py-2 text-sm font-medium text-cw-amber transition hover:bg-cw-amber/20 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {validatePending ? 'Validating...' : 'Validate'}
+        </button>
+        <button
+          type="button"
+          disabled={publishPending}
+          onClick={onPublish}
+          className="inline-flex rounded-full border border-cw-magenta/30 bg-cw-magenta/10 px-4 py-2 text-sm font-medium text-cw-magenta transition hover:bg-cw-magenta/20 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {publishPending ? 'Publishing...' : 'Publish'}
+        </button>
+      </div>
+    </form>
   )
 }

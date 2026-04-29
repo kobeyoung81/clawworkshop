@@ -21,13 +21,19 @@ type ListEventsParams struct {
 	FlowID      string
 	SinceSeq    int64
 	Limit       int
+	Order       string
 }
 
 func (r *EventRepository) List(ctx context.Context, params ListEventsParams) ([]models.Event, error) {
 	query := r.db.WithContext(ctx).
 		Model(&models.Event{}).
-		Joins("JOIN workspace_member ON workspace_member.workspace_id = event.workspace_id AND workspace_member.subject_id = ? AND workspace_member.status = ?", params.SubjectID, "active").
-		Order("seq ASC")
+		Joins("JOIN workspace_member ON workspace_member.workspace_id = event.workspace_id AND workspace_member.subject_id = ? AND workspace_member.status = ?", params.SubjectID, "active")
+
+	if params.Order == "desc" {
+		query = query.Order("seq DESC")
+	} else {
+		query = query.Order("seq ASC")
+	}
 
 	if params.WorkspaceID != "" {
 		query = query.Where("workspace_id = ?", params.WorkspaceID)

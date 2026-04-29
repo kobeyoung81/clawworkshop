@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { FormEvent } from 'react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ApiError } from '../api/http.ts'
 import { getProject, listProjectFlows, startFlow } from '../api/runtime.ts'
 
-export function ProjectDetailPage() {
+export function ProjectDetail() {
   const { id = '' } = useParams()
   const queryClient = useQueryClient()
   const [workflowId, setWorkflowId] = useState('')
@@ -21,16 +21,6 @@ export function ProjectDetailPage() {
     queryFn: () => listProjectFlows(id),
     enabled: id !== '',
   })
-
-  useEffect(() => {
-    if (!projectQuery.data?.templateWorkflowKeys.length) {
-      setWorkflowId('')
-      return
-    }
-    if (!projectQuery.data.templateWorkflowKeys.includes(workflowId)) {
-      setWorkflowId(projectQuery.data.templateWorkflowKeys[0])
-    }
-  }, [projectQuery.data, workflowId])
 
   const startFlowMutation = useMutation({
     mutationFn: ({ projectId, nextWorkflowId, expectedVersion }: { projectId: string; nextWorkflowId: string; expectedVersion: number }) =>
@@ -50,18 +40,23 @@ export function ProjectDetailPage() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!projectQuery.data || workflowId === '') {
+    const selectedWorkflowId = projectQuery.data?.templateWorkflowKeys.includes(workflowId)
+      ? workflowId
+      : (projectQuery.data?.templateWorkflowKeys[0] ?? '')
+    if (!projectQuery.data || selectedWorkflowId === '') {
       return
     }
     setFormMessage(null)
     startFlowMutation.mutate({
       projectId: projectQuery.data.id,
-      nextWorkflowId: workflowId,
+      nextWorkflowId: selectedWorkflowId,
       expectedVersion: projectQuery.data.version,
     })
   }
 
   const project = projectQuery.data
+  const workflowOptions = project?.templateWorkflowKeys ?? []
+  const selectedWorkflowId = workflowOptions.includes(workflowId) ? workflowId : (workflowOptions[0] ?? '')
 
   return (
     <div className="space-y-6">
@@ -122,7 +117,7 @@ export function ProjectDetailPage() {
               <label className="block">
                 <span className="mb-2 block text-sm text-cw-muted">Workflow</span>
                 <select
-                  value={workflowId}
+                  value={selectedWorkflowId}
                   onChange={(event) => setWorkflowId(event.target.value)}
                   className="w-full rounded-2xl border border-cw-border bg-white/5 px-4 py-3 text-white outline-none transition focus:border-cw-cyan/40"
                 >
@@ -136,7 +131,7 @@ export function ProjectDetailPage() {
               {formMessage ? <p className="text-sm text-amber-200">{formMessage}</p> : null}
               <button
                 type="submit"
-                disabled={startFlowMutation.isPending || !project || workflowId === ''}
+                disabled={startFlowMutation.isPending || !project || selectedWorkflowId === ''}
                 className="inline-flex rounded-full border border-cw-cyan/30 bg-cw-cyan/10 px-4 py-2 text-sm font-medium text-cw-cyan transition hover:bg-cw-cyan/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {startFlowMutation.isPending ? 'Starting...' : 'Start flow'}

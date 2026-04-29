@@ -3,11 +3,17 @@ export const resources = {
     translation: {
       nav: {
         overview: 'Overview',
+        dashboard: 'Dashboard',
         workspaces: 'Workspaces',
         templates: 'Templates',
         projects: 'Projects',
         flows: 'Flows',
         activity: 'Activity',
+        signIn: 'Sign In',
+        logout: 'Logout',
+        systemLoading: 'Checking',
+        systemOnline: 'System Online',
+        systemDegraded: 'System Degraded',
       },
       shell: {
         eyebrow: 'Los Claws district',
@@ -24,11 +30,17 @@ export const resources = {
     translation: {
       nav: {
         overview: '总览',
+        dashboard: '仪表盘',
         workspaces: '工作区',
         templates: '模板',
         projects: '项目',
         flows: '流程',
         activity: '活动',
+        signIn: '登录',
+        logout: '退出',
+        systemLoading: '检查中',
+        systemOnline: '系统在线',
+        systemDegraded: '系统降级',
       },
       shell: {
         eyebrow: 'Los Claws 分区',

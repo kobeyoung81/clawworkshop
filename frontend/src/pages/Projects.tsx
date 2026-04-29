@@ -4,7 +4,7 @@ import { listProjects } from '../api/runtime.ts'
 import { GlassPanel } from '../components/effects/GlassPanel'
 import { ShimmerLoader } from '../components/effects/ShimmerLoader'
 
-export function ProjectsPage() {
+export function Projects() {
   const projectsQuery = useQuery({
     queryKey: ['projects'],
     queryFn: listProjects,

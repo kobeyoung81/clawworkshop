@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { listTaskInbox } from '../api/runtime.ts'
 
-export function FlowsPage() {
+export function Flows() {
   const inboxQuery = useQuery({
     queryKey: ['task-inbox'],
     queryFn: () => listTaskInbox(),

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { getProjectTypeVersion } from '../api/project-types.ts'
 
-export function TemplateVersionPage() {
+export function TemplateVersion() {
   const { id = '', versionId = '' } = useParams()
   const versionQuery = useQuery({
     queryKey: ['project-type-version', id, versionId],

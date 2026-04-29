@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { ApiError } from '../api/http.ts'
 import { listEvents, updateEventCursor } from '../api/runtime.ts'
 
-export function ActivityPage() {
+export function Activity() {
   const [sinceSeq, setSinceSeq] = useState('0')
   const [message, setMessage] = useState<string | null>(null)
 

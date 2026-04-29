@@ -1,3 +1,4 @@
+import { apiBaseUrl } from '../config.ts'
 import { ApiError, fetchJson } from './http.ts'
 
 export interface RuntimeConfig {
@@ -27,6 +28,19 @@ export interface CurrentActorResponse {
   }
 }
 
+export interface DistrictStats {
+  district: string
+  status: string
+  stats: {
+    workspaces: number
+    projectTypes: number
+    projects: number
+    flows: number
+    tasks: number
+    artifacts: number
+  }
+}
+
 export async function fetchRuntimeConfig() {
   const response = await fetchJson<{ data: RuntimeConfig }>('/api/v1/config')
   return response.data
@@ -47,4 +61,20 @@ export async function fetchCurrentActor() {
     }
     throw error
   }
+}
+
+export async function fetchDistrictStats() {
+  const url = apiBaseUrl === '' ? '/api/stats' : `${apiBaseUrl}/api/stats`
+  const response = await fetch(url, {
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    throw new ApiError(`Request failed with status ${response.status}`, response.status)
+  }
+
+  return response.json() as Promise<DistrictStats>
 }

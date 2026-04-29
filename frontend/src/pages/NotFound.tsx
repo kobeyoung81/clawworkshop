@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 
-export function NotFoundPage() {
+export function NotFound() {
   return (
     <section className="rounded-[24px] border border-cw-border bg-cw-panel p-6 backdrop-blur">
       <p className="font-mono text-xs uppercase tracking-[0.25em] text-cw-amber">404</p>

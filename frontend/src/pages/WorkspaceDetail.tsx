@@ -9,7 +9,7 @@ import {
   updateWorkspaceMember,
 } from '../api/workspaces.ts'
 
-export function WorkspaceDetailPage() {
+export function WorkspaceDetail() {
   const { id = '' } = useParams()
   const queryClient = useQueryClient()
   const [subjectId, setSubjectId] = useState('')
