@@ -1,0 +1,172 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0a0e1a;
+  --color-surface: #141828;
+  --color-surface-2: #1a2038;
+  --color-accent-cyan: #00e5ff;
+  --color-accent-mag: #ff2d6b;
+  --color-accent-amber: #ffc107;
+  --color-text: #eef0f6;
+  --color-text-muted: #7a8ba8;
+  --color-border: rgba(0, 229, 255, 0.2);
+  --color-border-dim: rgba(0, 229, 255, 0.08);
+
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+/* ── Base Styles ─────────────────────────────────────────────── */
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ── Custom Scrollbar ────────────────────────────────────────── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--color-bg); border-left: 1px solid var(--color-border-dim); }
+::-webkit-scrollbar-thumb { background: rgba(0, 229, 255, 0.3); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 229, 255, 0.6); }
+
+/* ── Circuit Grid Background ─────────────────────────────────── */
+.circuit-grid {
+  background-image:
+    linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ── Neon Glow Utilities ─────────────────────────────────────── */
+.glow-cyan {
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.4), 0 0 24px rgba(0, 229, 255, 0.15);
+}
+.glow-mag {
+  box-shadow: 0 0 8px rgba(255, 45, 107, 0.4), 0 0 24px rgba(255, 45, 107, 0.15);
+}
+.glow-amber {
+  box-shadow: 0 0 8px rgba(255, 193, 7, 0.4), 0 0 24px rgba(255, 193, 7, 0.15);
+}
+.text-glow-cyan { text-shadow: 0 0 8px rgba(0, 229, 255, 0.7), 0 0 20px rgba(0, 229, 255, 0.3); }
+.text-glow-mag  { text-shadow: 0 0 8px rgba(255, 45, 107, 0.7), 0 0 20px rgba(255, 45, 107, 0.3); }
+.text-glow-amber{ text-shadow: 0 0 8px rgba(255, 193, 7, 0.7),  0 0 20px rgba(255, 193, 7, 0.3); }
+
+/* ── Glassmorphic Base ───────────────────────────────────────── */
+.glass {
+  background: rgba(20, 24, 40, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 229, 255, 0.12);
+}
+.glass-hover:hover {
+  background: rgba(20, 24, 40, 0.85);
+  border-color: rgba(0, 229, 255, 0.25);
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.08);
+  transition: all 0.2s ease;
+}
+
+/* ── Cyberpunk Clip-path Button ──────────────────────────────── */
+.btn-cyber {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-bg);
+  background: var(--color-accent-cyan);
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+}
+.btn-cyber:hover {
+  background: #33eaff;
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.5);
+}
+.btn-cyber-outline {
+  color: var(--color-accent-cyan);
+  background: transparent;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  border: 1px solid var(--color-accent-cyan);
+}
+.btn-cyber-outline:hover {
+  background: rgba(0, 229, 255, 0.1);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
+}
+
+/* ── Keyframes ───────────────────────────────────────────────── */
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+@keyframes ping-slow {
+  0%   { transform: scale(1); opacity: 0.8; }
+  70%  { transform: scale(1.4); opacity: 0; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+/* ── Animation Utility Classes ───────────────────────────────── */
+.animate-fade-up      { animation: fadeUp 0.5s ease both; }
+.animate-slide-in     { animation: slideIn 0.3s ease both; }
+.animate-shimmer      { animation: shimmer 1.5s infinite linear; }
+.animate-breathe      { animation: breathe 3s ease-in-out infinite; }
+.animate-ping-slow    { animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+
+/* ── Shimmer Loading Placeholder ─────────────────────────────── */
+.shimmer-bg {
+  background: linear-gradient(
+    90deg,
+    rgba(20, 24, 40, 0) 0%,
+    rgba(0, 229, 255, 0.06) 50%,
+    rgba(20, 24, 40, 0) 100%
+  );
+  background-size: 400px 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+/* ── Stagger delay helpers ───────────────────────────────────── */
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
