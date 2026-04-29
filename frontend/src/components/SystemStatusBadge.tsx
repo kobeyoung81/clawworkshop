@@ -2,9 +2,10 @@ import { useTranslation } from 'react-i18next'
 
 type SystemStatusBadgeProps = {
   status: 'loading' | 'ok' | 'degraded'
+  compact?: boolean
 }
 
-export function SystemStatusBadge({ status }: SystemStatusBadgeProps) {
+export function SystemStatusBadge({ status, compact = false }: SystemStatusBadgeProps) {
   const { t } = useTranslation()
   const config = {
     loading: {
@@ -23,10 +24,13 @@ export function SystemStatusBadge({ status }: SystemStatusBadgeProps) {
 
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-mono uppercase tracking-[0.18em] ${config.className}`}
+      aria-label={config.label}
+      className={`inline-flex items-center rounded-full border text-[11px] font-mono uppercase tracking-[0.18em] ${config.className} ${
+        compact ? 'h-8 w-8 justify-center px-0 py-0' : 'gap-2 px-3 py-1'
+      }`}
     >
       <span className={`h-2 w-2 rounded-full bg-current ${status === 'ok' ? 'animate-pulse' : ''}`} />
-      {config.label}
+      {compact ? null : config.label}
     </span>
   )
 }

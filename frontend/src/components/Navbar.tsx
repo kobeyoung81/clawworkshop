@@ -1,32 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import { NavLink } from 'react-router-dom'
 import { fetchReadiness, fetchRuntimeConfig } from '../api/system.ts'
 import { fallbackRuntimeConfig } from '../config.ts'
 import { useCurrentActor } from '../hooks/useCurrentActor.ts'
 import { LanguageToggle } from './LanguageToggle.tsx'
 import { SystemStatusBadge } from './SystemStatusBadge.tsx'
 import { useTranslation } from 'react-i18next'
-
-type NavItem = {
-  to: string
-  key: string
-}
-
-const navItems: NavItem[] = [
-  { to: '/', key: 'overview' },
-  { to: '/dashboard', key: 'dashboard' },
-  { to: '/workspaces', key: 'workspaces' },
-  { to: '/templates', key: 'templates' },
-  { to: '/projects', key: 'projects' },
-  { to: '/flows', key: 'flows' },
-  { to: '/activity', key: 'activity' },
-]
+import { getDashboardAuthHref } from '../utils/authLinks.ts'
 
 export function Navbar() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const [mobileOpen, setMobileOpen] = useState(false)
   const [authMessage, setAuthMessage] = useState<string | null>(null)
 
   const runtimeConfigQuery = useQuery({
@@ -44,10 +28,7 @@ export function Navbar() {
   const runtimeConfig = runtimeConfigQuery.data ?? fallbackRuntimeConfig
   const actor = currentActorQuery.data
 
-  const authLinkHref = useMemo(() => {
-    const redirect = typeof window === 'undefined' ? runtimeConfig.frontendUrl : window.location.href
-    return `${runtimeConfig.portalBaseUrl}/auth.html?redirect=${encodeURIComponent(redirect)}`
-  }, [runtimeConfig.frontendUrl, runtimeConfig.portalBaseUrl])
+  const authLinkHref = useMemo(() => getDashboardAuthHref(runtimeConfig), [runtimeConfig])
 
   const actorLabel = actor?.name?.trim() || actor?.email?.trim() || (actor ? `@${actor.id.slice(0, 8)}` : '')
   const systemStatus =
@@ -79,53 +60,45 @@ export function Navbar() {
     },
   })
 
-  const linkClass = ({ isActive }: { isActive: boolean }) =>
-    [
-      'px-3 py-2 text-sm font-medium transition-colors',
-      isActive ? 'text-cw-cyan' : 'text-cw-text-muted hover:text-cw-text',
-    ].join(' ')
-
   return (
-    <nav className="fixed inset-x-0 top-0 z-50 border-b border-cw-border bg-cw-surface/95 backdrop-blur-md">
-      <div className="mx-auto flex h-[60px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-6">
+    <nav className="fixed inset-x-0 top-0 z-50 border-b border-cw-border bg-cw-bg/88 shadow-[0_18px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <a href={runtimeConfig.portalBaseUrl} className="group flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cw-cyan/20 bg-cw-cyan/10 text-cw-cyan transition-colors group-hover:bg-cw-cyan/15">
+              <span className="font-display text-base font-bold">L</span>
+            </div>
             <span className="font-display text-lg font-bold tracking-tight text-cw-text">
               <span className="text-cw-cyan">Los</span>Claws
             </span>
           </a>
 
-          <div className="hidden items-center gap-3 md:flex">
-            <div className="inline-flex items-center gap-2 rounded-md border border-cw-purple/20 bg-cw-purple/10 px-3 py-1.5">
-              <span className="text-sm text-cw-purple">⚡</span>
-              <span className="font-display text-sm font-bold uppercase tracking-[0.16em] text-cw-text">ClawWorkshop</span>
-            </div>
-
-            <div className="hidden items-center md:flex">
-              {navItems.map((item) => (
-                <NavLink key={item.to} to={item.to} className={linkClass}>
-                  {t(`nav.${item.key}`)}
-                </NavLink>
-              ))}
-            </div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-cw-purple/20 bg-cw-purple/10 px-3 py-1.5">
+            <span className="text-sm text-cw-purple">⚡</span>
+            <span className="font-display text-[11px] font-bold uppercase tracking-[0.22em] text-cw-text sm:text-xs">
+              ClawWorkshop
+            </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="hidden md:block">
+        <div className="flex min-w-0 items-center justify-end gap-2 sm:gap-3">
+          <div className="shrink-0">
             <LanguageToggle />
           </div>
-          <div className="hidden lg:block">
+          <div className="hidden sm:block">
             <SystemStatusBadge status={systemStatus} />
+          </div>
+          <div className="sm:hidden">
+            <SystemStatusBadge status={systemStatus} compact />
           </div>
 
           {currentActorQuery.isLoading ? (
-            <span className="hidden text-xs font-mono text-cw-text-muted md:inline">...</span>
+            <span className="text-xs font-mono text-cw-text-muted">...</span>
           ) : actor ? (
-            <div className="hidden items-center gap-3 md:flex">
+            <div className="flex min-w-0 items-center gap-2">
               <a
                 href={`${runtimeConfig.portalBaseUrl}/user.html`}
-                className="text-xs font-mono text-cw-cyan transition-opacity hover:opacity-80"
+                className="max-w-[7rem] truncate rounded-full border border-cw-cyan/15 bg-cw-cyan/5 px-3 py-1.5 text-[11px] font-mono text-cw-cyan transition-colors hover:border-cw-cyan/30 hover:bg-cw-cyan/10 sm:max-w-[10rem] sm:text-xs"
               >
                 {actorLabel}
               </a>
@@ -133,7 +106,7 @@ export function Navbar() {
                 type="button"
                 onClick={() => logoutMutation.mutate()}
                 disabled={logoutMutation.isPending}
-                className="border border-cw-magenta/25 px-3 py-1.5 text-xs font-mono text-cw-text-muted transition-colors hover:border-cw-magenta hover:text-cw-magenta disabled:opacity-60"
+                className="rounded-full border border-cw-magenta/25 px-3 py-1.5 text-[11px] font-mono text-cw-text-muted transition-colors hover:border-cw-magenta hover:text-cw-magenta disabled:opacity-60 sm:text-xs"
               >
                 {logoutMutation.isPending ? '...' : t('nav.logout')}
               </button>
@@ -141,82 +114,17 @@ export function Navbar() {
           ) : (
             <a
               href={authLinkHref}
-              className="hidden text-xs font-mono text-cw-text-muted transition-colors hover:text-cw-text md:inline"
+              className="rounded-full border border-cw-cyan/20 bg-cw-cyan/5 px-3 py-1.5 text-[11px] font-mono text-cw-text-muted transition-colors hover:border-cw-cyan/30 hover:text-cw-text sm:text-xs"
             >
               {t('nav.signIn')}
             </a>
           )}
-
-          <button
-            type="button"
-            className="inline-flex h-9 w-9 items-center justify-center border border-cw-border text-cw-text-muted transition-colors hover:text-cw-text md:hidden"
-            onClick={() => setMobileOpen((current) => !current)}
-            aria-expanded={mobileOpen}
-            aria-controls="workshop-mobile-nav"
-            aria-label="Toggle navigation"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
-              {mobileOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-              )}
-            </svg>
-          </button>
         </div>
       </div>
 
       {authMessage ? (
         <div className="border-t border-cw-border bg-cw-bg/60 px-4 py-2 text-center text-xs text-cw-amber sm:px-6 lg:px-8">
           {authMessage}
-        </div>
-      ) : null}
-
-      {mobileOpen ? (
-        <div id="workshop-mobile-nav" className="border-t border-cw-border bg-cw-bg/95 px-4 py-4 md:hidden">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <LanguageToggle />
-            <SystemStatusBadge status={systemStatus} />
-          </div>
-
-          <div className="flex flex-col border border-cw-border bg-cw-surface">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                onClick={() => setMobileOpen(false)}
-                className={({ isActive }) => `${linkClass({ isActive })} border-b border-cw-border last:border-b-0`}
-              >
-                {t(`nav.${item.key}`)}
-              </NavLink>
-            ))}
-          </div>
-
-          <div className="mt-4 flex items-center justify-between gap-3 border border-cw-border bg-cw-surface px-3 py-3">
-            {actor ? (
-              <>
-                <a
-                  href={`${runtimeConfig.portalBaseUrl}/user.html`}
-                  className="text-xs font-mono text-cw-cyan"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {actorLabel}
-                </a>
-                <button
-                  type="button"
-                  onClick={() => logoutMutation.mutate()}
-                  disabled={logoutMutation.isPending}
-                  className="border border-cw-magenta/25 px-3 py-1.5 text-xs font-mono text-cw-text-muted"
-                >
-                  {logoutMutation.isPending ? '...' : t('nav.logout')}
-                </button>
-              </>
-            ) : (
-              <a href={authLinkHref} className="text-xs font-mono text-cw-text-muted" onClick={() => setMobileOpen(false)}>
-                {t('nav.signIn')}
-              </a>
-            )}
-          </div>
         </div>
       ) : null}
     </nav>

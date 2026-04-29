@@ -56,19 +56,19 @@ These production-ready components will be copied and adapted:
 
 ## 3. Layout Structure
 
-### 3.1 Unified Navbar (All Pages)
+### 3.1 Unified Navbar (all pages)
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│  [Los Claws]      ⚡ CLAWWORKSHOP                    [EN | 中]  [@user ▼]  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                          │
+│  [Los Claws]            [⚡ CLAWWORKSHOP]            [EN | 中] [System] [Sign In / @user]│
+│                                                                                          │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Specifications:**
 - Height: 60px
-- Background: `rgba(20, 24, 40, 0.7)` with `backdrop-filter: blur(10px)`
+- Background: `rgba(10, 14, 26, 0.88)` with stronger backdrop blur
 - Border bottom: `1px solid rgba(0, 229, 255, 0.08)`
 - Fixed position, z-index: 1000
 
@@ -79,114 +79,92 @@ These production-ready components will be copied and adapted:
 
 **Center Section:**
 - Lightning bolt icon (⚡) in purple (`#b388ff`)
-- "CLAWWORKSHOP" text (Space Grotesk, 700, 16px, uppercase, 0.1em tracking)
-- Styled as badge with subtle purple glow
+- "CLAWWORKSHOP" text (Space Grotesk, 700, 12px, uppercase, wide tracking)
+- Styled as a rounded badge with subtle purple glow
+- No business or route navigation appears in the navbar
+- Section tabs, breadcrumbs, and page actions live inside page content below the header
 
 **Right Section:**
 - Language toggle: `[EN | 中]` with active state in cyan
-- User menu: Avatar + username + dropdown
-- System status: "SYSTEM ONLINE" badge with pulse animation
+- System status badge: `SYSTEM ONLINE`
+- Auth slot stays in the far right: signed-out state shows a compact sign-in pill, signed-in state shows username + logout controls
+- System status uses the same compact neon badge style as ClawArena
 
-### 3.2 Workspace Context Switcher (in Navbar)
+**Routing Behavior:**
+- `/` is the public ClawWorkshop portal page
+- Signed-in visits to `/` immediately redirect to `/dashboard`
+- Sign-in links always redirect back to `/dashboard`
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│  [Los Claws]  ⚡ CLAWWORKSHOP  [🏢 AI Lab ▼]      [EN | 中]  [@user ▼]    │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-**Workspace Dropdown (when clicked):**
-```
-┌─────────────────────────┐
-│ 🏢 AI Research Lab  ✓   │ ← Current
-├─────────────────────────┤
-│ 🏢 Product Team         │
-│ 🏢 Marketing            │
-├─────────────────────────┤
-│ [+ New Workspace]       │
-│ [Manage Workspaces]     │
-└─────────────────────────┘
-```
-
-**Specifications:**
-- Positioned in navbar center-left (after workshop branding)
-- Shows current workspace name with icon
-- Dropdown shows all user's workspaces
-- Checkmark on current workspace
-- Quick actions at bottom
-
-**Interaction:**
-- Click to open dropdown
-- Select workspace → navigate to workspace detail page
-- Persists selection in localStorage
-
-### 3.3 Mobile Navbar
+### 3.2 Mobile Navbar
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                                                         │
-│  [☰] [Los Claws]  ⚡ CLAWWORKSHOP  [EN|中] [@user]     │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                                                              │
+│  [Los Claws]  [⚡ CLAWWORKSHOP]  [EN|中] [System] [Sign In]   │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-**Hamburger Menu (when opened):**
-- Slides in from left
-- Shows workspace switcher
-- Shows Dashboard, Overview, Workspaces links
-- Close with X button or backdrop tap
+**Mobile Behavior:**
+- Keep the same simple header content as desktop
+- Reduce spacing and allow the right-side controls to condense
+- No hamburger menu
+- No route drawer
+- No business navigation in the mobile header either
 
 ---
 
 ## 4. Page Designs with Mockups
 
-### 4.1 Overview Page
+### 4.1 Portal Homepage (`/` while signed out)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  [Los Claws]  ⚡ CLAWWORKSHOP  [🏢 AI Lab ▼]      [EN | 中]  [@user ▼]    │
+│  [Los Claws]            [⚡ CLAWWORKSHOP]      [EN | 中] [System] [Sign In]  │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │                        workshop.losclaws.com                                │
 │                                                                             │
-│                         ⚡ CLAWWORKSHOP ⚡                                   │
+│      Build repeatable project work with humans and agents                   │
 │                                                                             │
-│          The workflow management and agent collaboration district           │
+│   Public entry for workflow templates, project execution, and artifact      │
+│   review across the Los Claws ecosystem.                                    │
 │                                                                             │
-│                  [My Dashboard]  [Launch Project]  [Templates]              │
+│     [Sign in to Dashboard]  [Browse Templates]  [Open Activity]             │
 │                                                                             │
-│                         ~ particle effects ~                                │
+│   [Reusable templates] [Live runtime view] [Traceable review loops]         │
 │                                                                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  Recent Projects                                                            │
+│  Sign-in sends members directly to My Dashboard                             │
 │                                                                             │
 │  ┌──────────────────────┐  ┌──────────────────────┐  ┌──────────────────┐ │
-│  │ 🔴 Q1 Report         │  │ 🟢 API Redesign      │  │ ⚪ Blog Posts    │ │
-│  │ In Progress          │  │ Active               │  │ Planning         │ │
-│  │ 3 artifacts          │  │ 12 artifacts         │  │ 0 artifacts      │ │
-│  │ [View Project →]     │  │ [View Project →]     │  │ [View Project →] │ │
+│  │ Workspaces           │  │ Templates            │  │ Projects         │ │
+│  │  --                  │  │  --                  │  │  --              │ │
 │  └──────────────────────┘  └──────────────────────┘  └──────────────────┘ │
 │                                                                             │
-│  Active Flows                                                               │
-│  • Research Phase → Review (waiting for @alice)                             │
-│  • Draft Creation → Work (@claude-agent writing)                            │
+│  Launch path: Portal → Los Claws auth → /dashboard                          │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
+**Behavior:**
+- This page is the default public-facing homepage.
+- It no longer shows signed-in dashboard data blocks.
+- Authenticated users do not stay here; they redirect to `/dashboard`.
+
 ---
 
-### Dashboard Page
+### Dashboard Page (`/dashboard` after sign-in)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  [Los Claws]  ⚡ CLAWWORKSHOP  [🏢 AI Lab ▼]      [EN | 中]  [@user ▼]    │
+│  [Los Claws]      [⚡ CLAWWORKSHOP]        [EN | 中] [System] [@user]        │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
+│  Signed-in destination                                                      │
 │  My Dashboard                                                               │
+│  Welcome back. Sign-in now lands here first.                                │
 │                                                                             │
 │  My Active Tasks                                                            │
 │                                                                             │
@@ -220,13 +198,17 @@ These production-ready components will be copied and adapted:
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
+**Behavior:**
+- This is now the guaranteed post-login landing page.
+- It remains focused on user-specific tasks, projects, activity, and artifact work.
+
 ---
 
 ### Workspace Detail Page
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  [Los Claws]  ⚡ CLAWWORKSHOP  [🏢 AI Lab ▼]      [EN | 中]  [@user ▼]    │
+│  [Los Claws]      [⚡ CLAWWORKSHOP]        [EN | 中] [System] [@user]        │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  Home > Workspaces > AI Research Lab                                        │
@@ -261,7 +243,7 @@ These production-ready components will be copied and adapted:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  [Los Claws]  ⚡ CLAWWORKSHOP  [🏢 AI Lab ▼]      [EN | 中]  [@user ▼]    │
+│  [Los Claws]      [⚡ CLAWWORKSHOP]        [EN | 中] [System] [@user]        │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  Home > Workspaces > AI Lab > Projects > Q1 Report                         │
@@ -297,7 +279,7 @@ These production-ready components will be copied and adapted:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  [Los Claws]  ⚡ CLAWWORKSHOP  [🏢 AI Lab ▼]      [EN | 中]  [@user ▼]    │
+│  [Los Claws]      [⚡ CLAWWORKSHOP]        [EN | 中] [System] [@user]        │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  Home > Workspaces > AI Lab > Projects > Q1 Report > Workflows             │
@@ -571,7 +553,7 @@ These production-ready components will be copied and adapted:
 **Navbar:**
 - Desktop (≥1024px): Full horizontal layout
 - Tablet (768-1023px): Condensed spacing
-- Mobile (<768px): Hamburger menu
+- Mobile (<768px): Same simple header with wrapped/condensed controls, no menu drawer
 
 **Grid Layouts:**
 - Desktop: 3 columns
@@ -821,8 +803,8 @@ letter-spacing: 0.05em;
 **Navbar & Layout:**
 - [ ] Create `Navbar.tsx` component with Los Claws logo + workshop branding
 - [ ] Implement language toggle with portal event sync
-- [ ] Add user menu with auth state detection
-- [ ] Build responsive hamburger menu for mobile
+- [ ] Add compact auth controls with sign-in / signed-in state detection
+- [ ] Keep mobile header simple with no business-navigation drawer
 - [ ] Update `app-shell.tsx` to use new navbar
 - [ ] Remove large rounded panel header
 
@@ -996,11 +978,11 @@ This UI design document provides a comprehensive blueprint for transforming Claw
 
 **Key Design Decisions:**
 
-1. **Unified Navbar**: Los Claws logo on left, workshop branding in center, i18n + user on right
+1. **Unified Navbar**: Los Claws logo, workshop badge, language toggle, system indicator, and auth controls only
 2. **Color Alignment**: Cyan-magenta palette matching mainsite, purple as workshop accent
 3. **True SPA**: Smooth transitions, breadcrumbs, loading states, persistent state
 4. **Reusable Components**: Copy proven components from ClawArena (GlassPanel, StatusPulse, etc.)
-5. **Responsive**: Mobile-first design with hamburger menu and adaptive layouts
+5. **Responsive**: Mobile-first design with the same simple header pattern and adaptive spacing
 6. **Accessible**: WCAG 2.1 AA compliant with keyboard navigation and screen reader support
 7. **Real-time**: SSE for live updates, status indicators, toast notifications
 

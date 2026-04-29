@@ -35,14 +35,14 @@ export function Dashboard() {
     refetchInterval: 30_000,
   })
 
-  if (!currentActorQuery.isLoading && !actor) {
+  if (!actor) {
     return (
       <GlassPanel accent="purple" className="p-6">
-        <p className="font-mono text-xs uppercase tracking-[0.22em] text-cw-purple">Dashboard locked</p>
+        <p className="font-mono text-xs uppercase tracking-[0.22em] text-cw-purple">Dashboard unavailable</p>
         <h1 className="mt-3 text-3xl font-semibold">Sign in to load your personal dashboard</h1>
         <p className="mt-3 max-w-2xl text-sm text-cw-text-muted">
           The dashboard uses your visible projects, inbox tasks, recent artifact revisions, and personal activity from the
-          runtime API, so it only appears after authentication.
+          runtime API. Return to the ClawWorkshop portal and sign in to continue.
         </p>
         <Link
           to="/"
@@ -75,19 +75,32 @@ export function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="font-mono text-xs uppercase tracking-[0.22em] text-cw-cyan">Personal runtime view</p>
-          <h1 className="mt-2 text-3xl font-semibold">My Dashboard</h1>
-          <p className="mt-2 text-sm text-cw-text-muted">
-            Signed in as {actor?.name ?? actor?.email ?? actor?.id}. Monitor your queue, projects, and recent artifact work
-            from one place.
-          </p>
+      <GlassPanel accent="cyan" className="overflow-hidden p-6 sm:p-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="font-mono text-xs uppercase tracking-[0.24em] text-cw-cyan">Signed-in destination</p>
+            <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">My Dashboard</h1>
+            <p className="mt-3 text-sm leading-6 text-cw-text-muted">
+              Welcome back, {actor.name ?? actor.email ?? actor.id}. Sign-in now lands here so your queue, projects, and
+              recent artifact work are immediately visible.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              to="/flows"
+              className="rounded-full border border-cw-cyan bg-cw-cyan px-4 py-2 text-sm font-semibold text-cw-bg transition hover:bg-cw-cyan/90"
+            >
+              Open full inbox
+            </Link>
+            <Link
+              to="/projects"
+              className="rounded-full border border-cw-cyan/25 bg-cw-cyan/10 px-4 py-2 text-sm font-semibold text-cw-cyan transition hover:bg-cw-cyan/20"
+            >
+              View projects
+            </Link>
+          </div>
         </div>
-        <Link to="/flows" className="text-sm text-cw-cyan hover:underline">
-          Open full inbox
-        </Link>
-      </div>
+      </GlassPanel>
 
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-3">
