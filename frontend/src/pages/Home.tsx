@@ -184,7 +184,8 @@ export function Home() {
             className="mb-4 font-display text-5xl font-bold tracking-[-0.03em] text-white text-glow-cyan animate-fade-up sm:text-7xl"
             style={{ animationDelay: '100ms' }}
           >
-            {t('home.title')}
+            <span>{t('home.title_prefix')}</span>{' '}
+            <span className="text-accent-cyan">{t('home.title_accent')}</span>
           </h1>
           <p
             className="mx-auto mb-8 max-w-2xl text-lg text-text-muted animate-fade-up"

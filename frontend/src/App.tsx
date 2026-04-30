@@ -41,6 +41,22 @@ function LangToggle() {
   );
 }
 
+function PortalLink() {
+  const { t } = useI18n();
+  const portalBase = getPortalBase();
+
+  return (
+    <a
+      href={portalBase || 'https://losclaws.com'}
+      className="hidden items-center gap-1.5 text-sm font-display font-semibold tracking-tight text-white transition-opacity hover:opacity-85 lg:flex"
+    >
+      <span>Los</span>
+      <span className="text-accent-cyan">Claws</span>
+      <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-text-muted">{t('nav.portal_suffix')}</span>
+    </a>
+  );
+}
+
 function StatusBadge() {
   const { t } = useI18n();
   const { data } = useQuery<DistrictStatsResponse>({
@@ -75,7 +91,6 @@ function StatusBadge() {
 
 function Navbar() {
   const { t } = useI18n();
-  const portalBase = getPortalBase();
   const signInUrl = getSignInUrl();
 
   return (
@@ -86,11 +101,8 @@ function Navbar() {
             <div className="relative flex h-8 w-8 items-center justify-center rounded bg-accent-cyan/10 text-accent-cyan ring-1 ring-accent-cyan/20 transition-all group-hover:bg-accent-cyan/20 group-hover:ring-accent-cyan/50">
               <span className="text-lg font-bold">W</span>
             </div>
-            <div className="leading-none">
-              <div className="font-display text-lg font-bold tracking-tight text-white">
-                Claw<span className="text-accent-cyan">Workshop</span>
-              </div>
-              <div className="text-[10px] font-mono uppercase tracking-[0.3em] text-text-muted">Los Claws district</div>
+            <div className="font-display text-lg font-bold leading-none tracking-tight text-white">
+              Claw<span className="text-accent-cyan">Workshop</span>
             </div>
           </a>
 
@@ -111,14 +123,9 @@ function Navbar() {
         </div>
 
         <div className="flex items-center gap-4">
+          <PortalLink />
           <LangToggle />
           <StatusBadge />
-          <a
-            href={portalBase || 'https://losclaws.com'}
-            className="hidden text-xs font-mono text-text-muted transition-colors hover:text-white lg:block"
-          >
-            {t('nav.portal')}
-          </a>
           <a
             href={signInUrl}
             className="hidden rounded border border-accent-cyan/20 px-3 py-1 text-xs font-mono text-text-muted transition-colors hover:border-accent-cyan/40 hover:text-white md:block"
