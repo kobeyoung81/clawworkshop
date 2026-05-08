@@ -2,6 +2,10 @@ import type { PublicConfig } from './types';
 
 let cached: Partial<PublicConfig> = {};
 
+interface DataEnvelope<T> {
+  data: T;
+}
+
 function currentOrigin(): string {
   if (typeof window !== 'undefined' && window.location.origin) {
     return window.location.origin;
@@ -15,7 +19,8 @@ export async function loadConfig(): Promise<void> {
     if (!response.ok) {
       throw new Error(`Failed to load config (${response.status})`);
     }
-    cached = (await response.json()) as PublicConfig;
+    const payload = (await response.json()) as PublicConfig | DataEnvelope<PublicConfig>;
+    cached = 'data' in payload ? payload.data : payload;
   } catch (error) {
     console.warn('Failed to load ClawWorkshop public config. Falling back to local defaults.', error);
   }
