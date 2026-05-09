@@ -28,20 +28,47 @@ func (m *Middleware) Optional(next http.Handler) http.Handler {
 		}
 
 		rawToken, source := tokenFromRequest(r, m.validator.CookieName())
-		if rawToken == "" {
-			next.ServeHTTP(w, r)
-			return
+		if rawToken != "" {
+			actor, err := m.validator.ValidateToken(r.Context(), rawToken, source)
+			if err == nil {
+				next.ServeHTTP(w, r.WithContext(ContextWithActor(r.Context(), actor)))
+				return
+			}
+
+			m.logger.Warn("request authentication failed", "error", err, "path", r.URL.Path, "source", source)
+			if source == "bearer" {
+				next.ServeHTTP(w, r)
+				return
+			}
 		}
 
-		actor, err := m.validator.ValidateToken(r.Context(), rawToken, source)
-		if err != nil {
-			m.logger.Warn("request authentication failed", "error", err, "path", r.URL.Path)
-			writeUnauthorized(w, r, err)
-			return
+		cookieHeader := strings.TrimSpace(r.Header.Get("Cookie"))
+		if hasSessionCookies(cookieHeader, m.validator.CookieName()) {
+			actor, setCookieHeaders, err := m.validator.ValidateSession(r.Context(), cookieHeader)
+			if err == nil {
+				for _, setCookieHeader := range setCookieHeaders {
+					w.Header().Add("Set-Cookie", setCookieHeader)
+				}
+				next.ServeHTTP(w, r.WithContext(ContextWithActor(r.Context(), actor)))
+				return
+			}
+
+			if !errors.Is(err, ErrTokenMissing) {
+				m.logger.Warn("request session authentication failed", "error", err, "path", r.URL.Path)
+			}
 		}
 
-		next.ServeHTTP(w, r.WithContext(ContextWithActor(r.Context(), actor)))
+		next.ServeHTTP(w, r)
 	})
+}
+
+func hasSessionCookies(cookieHeader string, accessCookieName string) bool {
+	cookieHeader = strings.TrimSpace(cookieHeader)
+	if cookieHeader == "" {
+		return false
+	}
+
+	return strings.Contains(cookieHeader, accessCookieName+"=") || strings.Contains(cookieHeader, "lc_")
 }
 
 func (m *Middleware) Require(next http.Handler) http.Handler {

@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { getCurrentActor } from '../../api/dashboard';
 import { getDistrictStats } from '../../api/public';
 import { getPortalBase, getSignInUrl } from '../../config';
 import { useI18n } from '../../i18n';
-import type { DistrictStatsResponse } from '../../types';
+import type { CurrentActorResponse, DistrictStatsResponse } from '../../types';
 
 interface TopNavbarProps {
   variant?: 'landing' | 'dashboard';
@@ -90,6 +91,13 @@ function StatusBadge() {
 export function TopNavbar({ variant = 'landing' }: TopNavbarProps) {
   const { t } = useI18n();
   const signInUrl = getSignInUrl('/dashboard');
+  const actorQuery = useQuery<CurrentActorResponse>({
+    queryKey: ['current-actor'],
+    queryFn: getCurrentActor,
+    retry: false,
+    staleTime: 60_000,
+  });
+  const actorName = actorQuery.data?.actor.name?.trim() || actorQuery.data?.actor.email?.trim() || actorQuery.data?.actor.id;
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-white/10 bg-bg/80 backdrop-blur-md">
@@ -124,12 +132,21 @@ export function TopNavbar({ variant = 'landing' }: TopNavbarProps) {
           <PortalLink />
           <LangToggle />
           <StatusBadge />
-          <a
-            href={signInUrl}
-            className="hidden rounded border border-accent-cyan/20 px-3 py-1 text-xs font-mono text-text-muted transition-colors hover:border-accent-cyan/40 hover:text-white md:block"
-          >
-            {t('nav.sign_in')}
-          </a>
+          {actorName ? (
+            <Link
+              to="/dashboard"
+              className="hidden rounded border border-accent-cyan/20 bg-accent-cyan/5 px-3 py-1 text-xs font-mono text-accent-cyan transition-colors hover:border-accent-cyan/40 hover:text-white md:block"
+            >
+              {actorName}
+            </Link>
+          ) : (
+            <a
+              href={signInUrl}
+              className="hidden rounded border border-accent-cyan/20 px-3 py-1 text-xs font-mono text-text-muted transition-colors hover:border-accent-cyan/40 hover:text-white md:block"
+            >
+              {t('nav.sign_in')}
+            </a>
+          )}
         </div>
       </div>
     </nav>

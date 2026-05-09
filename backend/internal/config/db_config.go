@@ -57,6 +57,7 @@ func (cfg *Config) LoadFromDB(db *gorm.DB) error {
 	cfg.HTTP.AllowedOrigins = parseCSV(dbGet(values, "allowed_origins", strings.Join(cfg.HTTP.AllowedOrigins, ",")), cfg.HTTP.AllowedOrigins)
 	cfg.HTTP.MaxBodyBytes = dbGetInt64(values, "max_artifact_bytes", cfg.HTTP.MaxBodyBytes)
 	cfg.Auth.Enabled = dbGetBool(values, "auth_enabled", cfg.Auth.Enabled)
+	cfg.Auth.BaseURL = dbGet(values, "auth_base_url", cfg.Auth.BaseURL)
 	cfg.Auth.JWKSURL = dbGet(values, "auth_jwks_url", cfg.Auth.JWKSURL)
 	cfg.Auth.CookieName = dbGet(values, "auth_cookie_name", cfg.Auth.CookieName)
 	cfg.Auth.JWKSCacheTTL = dbGetDuration(values, "auth_jwks_cache_ttl", cfg.Auth.JWKSCacheTTL)

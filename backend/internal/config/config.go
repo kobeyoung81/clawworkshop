@@ -31,6 +31,7 @@ type MySQLConfig struct {
 
 type AuthConfig struct {
 	Enabled      bool
+	BaseURL      string
 	JWKSURL      string
 	CookieName   string
 	JWKSCacheTTL time.Duration
@@ -79,6 +80,7 @@ func LoadInitial() Config {
 		},
 		Auth: AuthConfig{
 			Enabled:      true,
+			BaseURL:      authBaseURL,
 			JWKSURL:      authJWKSURL,
 			CookieName:   "lc_access",
 			JWKSCacheTTL: 15 * time.Minute,
