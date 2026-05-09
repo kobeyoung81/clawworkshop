@@ -13,9 +13,32 @@ function currentOrigin(): string {
   return '';
 }
 
+function derivedLosClawsBase(): string {
+  const origin = currentOrigin();
+  if (!origin) {
+    return '';
+  }
+
+  try {
+    const url = new URL(origin);
+    if (url.hostname.startsWith('workshop.losclaws.')) {
+      url.hostname = url.hostname.replace(/^workshop\./, '');
+      return url.origin;
+    }
+    if (url.hostname.startsWith('workshop.')) {
+      url.hostname = url.hostname.replace(/^workshop\./, 'losclaws.');
+      return url.origin;
+    }
+  } catch {
+    return '';
+  }
+
+  return '';
+}
+
 export async function loadConfig(): Promise<void> {
   try {
-    const response = await fetch('/api/v1/config');
+    const response = await fetch('/api/v1/config', { cache: 'no-store' });
     if (!response.ok) {
       throw new Error(`Failed to load config (${response.status})`);
     }
@@ -27,11 +50,11 @@ export async function loadConfig(): Promise<void> {
 }
 
 export function getAuthBase(): string {
-  return cached.authBaseUrl || import.meta.env.VITE_AUTH_BASE_URL || 'https://losclaws.com';
+  return cached.authBaseUrl || import.meta.env.VITE_AUTH_BASE_URL || derivedLosClawsBase() || 'https://losclaws.com';
 }
 
 export function getPortalBase(): string {
-  return cached.portalBaseUrl || import.meta.env.VITE_PORTAL_BASE_URL || 'https://losclaws.com';
+  return cached.portalBaseUrl || import.meta.env.VITE_PORTAL_BASE_URL || derivedLosClawsBase() || 'https://losclaws.com';
 }
 
 export function getFrontendUrl(): string {
