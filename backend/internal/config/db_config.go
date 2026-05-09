@@ -11,10 +11,6 @@ import (
 	"github.com/supremelosclaws/clawworkshop/backend/internal/models"
 )
 
-func EnsureBootstrapSchema(db *gorm.DB) error {
-	return db.AutoMigrate(&models.AppConfig{})
-}
-
 func SeedDefaults(db *gorm.DB, bootstrap Config) error {
 	defaults := []models.AppConfig{
 		{ConfigKey: "port", ConfigValue: extractPort(bootstrap.HTTP.Address, "8080"), Description: "HTTP server port", Public: false},

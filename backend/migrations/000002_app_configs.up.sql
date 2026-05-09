@@ -1,4 +1,4 @@
-CREATE TABLE app_configs (
+CREATE TABLE IF NOT EXISTS app_configs (
   config_key VARCHAR(128) NOT NULL PRIMARY KEY,
   config_value TEXT NOT NULL,
   description TEXT NULL,

@@ -232,17 +232,17 @@ CREATE TABLE feedback_entry (
   KEY idx_feedback_entry_session_created (feedback_session_id, created_at)
 );
 
-CREATE TABLE comment (
+CREATE TABLE runtime_comment (
   id CHAR(26) NOT NULL PRIMARY KEY,
   parent_type VARCHAR(32) NOT NULL,
   parent_id CHAR(26) NOT NULL,
   author_id CHAR(26) NOT NULL,
   body LONGTEXT NOT NULL,
   created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-  KEY idx_comment_parent (parent_type, parent_id, created_at)
+  KEY idx_runtime_comment_parent (parent_type, parent_id, created_at)
 );
 
-CREATE TABLE event (
+CREATE TABLE runtime_event (
   id CHAR(26) NOT NULL PRIMARY KEY,
   seq BIGINT NOT NULL AUTO_INCREMENT,
   workspace_id CHAR(26) NOT NULL,
@@ -255,13 +255,13 @@ CREATE TABLE event (
   actor_id CHAR(26) NOT NULL,
   payload_json JSON NOT NULL,
   created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-  CONSTRAINT fk_event_workspace FOREIGN KEY (workspace_id) REFERENCES workspace(id) ON DELETE CASCADE,
-  CONSTRAINT fk_event_project FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE SET NULL,
-  CONSTRAINT fk_event_flow FOREIGN KEY (flow_id) REFERENCES flow(id) ON DELETE SET NULL,
-  UNIQUE KEY uq_event_seq (seq),
-  KEY idx_event_workspace_seq (workspace_id, seq),
-  KEY idx_event_project_seq (project_id, seq),
-  KEY idx_event_flow_seq (flow_id, seq)
+  CONSTRAINT fk_runtime_event_workspace FOREIGN KEY (workspace_id) REFERENCES workspace(id) ON DELETE CASCADE,
+  CONSTRAINT fk_runtime_event_project FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE SET NULL,
+  CONSTRAINT fk_runtime_event_flow FOREIGN KEY (flow_id) REFERENCES flow(id) ON DELETE SET NULL,
+  UNIQUE KEY uq_runtime_event_seq (seq),
+  KEY idx_runtime_event_workspace_seq (workspace_id, seq),
+  KEY idx_runtime_event_project_seq (project_id, seq),
+  KEY idx_runtime_event_flow_seq (flow_id, seq)
 );
 
 CREATE TABLE notification_cursor (

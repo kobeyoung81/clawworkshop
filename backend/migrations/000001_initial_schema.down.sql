@@ -1,4 +1,6 @@
 DROP TABLE IF EXISTS notification_cursor;
+DROP TABLE IF EXISTS runtime_event;
+DROP TABLE IF EXISTS runtime_comment;
 DROP TABLE IF EXISTS event;
 DROP TABLE IF EXISTS comment;
 DROP TABLE IF EXISTS feedback_entry;

@@ -222,11 +222,11 @@ func (FeedbackEntry) TableName() string {
 }
 
 func (Comment) TableName() string {
-	return "comment"
+	return "runtime_comment"
 }
 
 func (Event) TableName() string {
-	return "event"
+	return "runtime_event"
 }
 
 func (NotificationCursor) TableName() string {
