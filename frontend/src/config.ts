@@ -46,8 +46,12 @@ export function getClawWorkshopSkillURL(): string {
   );
 }
 
-export function getSignInUrl(): string {
+export function getSignInUrl(redirectPath?: string): string {
   const base = getAuthBase().replace(/\/$/, '') || getPortalBase().replace(/\/$/, '');
-  const redirect = encodeURIComponent(window.location.href);
+  const redirectTarget =
+    redirectPath != null
+      ? `${getFrontendUrl().replace(/\/$/, '')}${redirectPath.startsWith('/') ? redirectPath : `/${redirectPath}`}`
+      : window.location.href;
+  const redirect = encodeURIComponent(redirectTarget);
   return `${base}/auth.html?redirect=${redirect}`;
 }
