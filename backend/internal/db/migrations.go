@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	mysql "github.com/go-sql-driver/mysql"
 	"github.com/golang-migrate/migrate/v4"
 	migratemysql "github.com/golang-migrate/migrate/v4/database/mysql"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
@@ -27,14 +28,14 @@ type MigrationStatus struct {
 	LegacyBaseline *uint
 }
 
-func EnsureMigrations(ctx context.Context, sqlDB *sql.DB) error {
-	migrator, err := OpenMigrator(sqlDB)
+func EnsureMigrations(ctx context.Context, dsn string) error {
+	migrator, migrationDB, err := OpenMigrator(dsn)
 	if err != nil {
 		return err
 	}
-	defer closeMigrator(migrator)
+	defer closeMigrator(migrator, migrationDB)
 
-	if _, err := adoptLegacySchema(ctx, sqlDB, migrator); err != nil {
+	if _, err := adoptLegacySchema(ctx, migrationDB, migrator); err != nil {
 		return err
 	}
 
@@ -45,31 +46,39 @@ func EnsureMigrations(ctx context.Context, sqlDB *sql.DB) error {
 	return nil
 }
 
-func OpenMigrator(sqlDB *sql.DB) (*migrate.Migrate, error) {
-	driver, err := migratemysql.WithInstance(sqlDB, &migratemysql.Config{})
+func OpenMigrator(dsn string) (*migrate.Migrate, *sql.DB, error) {
+	migrationDB, err := openMigrationDB(dsn)
 	if err != nil {
-		return nil, fmt.Errorf("create mysql migration driver: %w", err)
+		return nil, nil, err
+	}
+
+	driver, err := migratemysql.WithInstance(migrationDB, &migratemysql.Config{})
+	if err != nil {
+		_ = migrationDB.Close()
+		return nil, nil, fmt.Errorf("create mysql migration driver: %w", err)
 	}
 
 	source, err := iofs.New(sqlmigrations.Files, ".")
 	if err != nil {
-		return nil, fmt.Errorf("open embedded migrations: %w", err)
+		_ = migrationDB.Close()
+		return nil, nil, fmt.Errorf("open embedded migrations: %w", err)
 	}
 
 	migrator, err := migrate.NewWithInstance("iofs", source, "mysql", driver)
 	if err != nil {
-		return nil, fmt.Errorf("create migrator: %w", err)
+		_ = migrationDB.Close()
+		return nil, nil, fmt.Errorf("create migrator: %w", err)
 	}
 
-	return migrator, nil
+	return migrator, migrationDB, nil
 }
 
-func CurrentMigrationStatus(ctx context.Context, sqlDB *sql.DB) (MigrationStatus, error) {
-	migrator, err := OpenMigrator(sqlDB)
+func CurrentMigrationStatus(ctx context.Context, dsn string) (MigrationStatus, error) {
+	migrator, migrationDB, err := OpenMigrator(dsn)
 	if err != nil {
 		return MigrationStatus{}, err
 	}
-	defer closeMigrator(migrator)
+	defer closeMigrator(migrator, migrationDB)
 
 	version, dirty, err := migrator.Version()
 	if err == nil {
@@ -83,7 +92,7 @@ func CurrentMigrationStatus(ctx context.Context, sqlDB *sql.DB) (MigrationStatus
 		return MigrationStatus{}, fmt.Errorf("read migration version: %w", err)
 	}
 
-	legacyBaseline, err := detectLegacyBaseline(ctx, sqlDB)
+	legacyBaseline, err := detectLegacyBaseline(ctx, migrationDB)
 	if err != nil {
 		return MigrationStatus{}, err
 	}
@@ -97,6 +106,13 @@ func adoptLegacySchema(ctx context.Context, sqlDB *sql.DB, migrator *migrate.Mig
 	version, dirty, err := migrator.Version()
 	if err == nil {
 		if dirty {
+			recovered, recoverErr := recoverDirtyInitialMigration(ctx, sqlDB, migrator, version)
+			if recoverErr != nil {
+				return nil, recoverErr
+			}
+			if recovered {
+				return nil, nil
+			}
 			return nil, fmt.Errorf("database migration state is dirty at version %d", version)
 		}
 		return nil, nil
@@ -183,6 +199,38 @@ func detectLegacyBaseline(ctx context.Context, sqlDB *sql.DB) (*uint, error) {
 	return nil, nil
 }
 
+func recoverDirtyInitialMigration(ctx context.Context, sqlDB *sql.DB, migrator *migrate.Migrate, version uint) (bool, error) {
+	if version != migrationVersionInitialSchema {
+		return false, nil
+	}
+
+	tables, err := listTables(ctx, sqlDB)
+	if err != nil {
+		return false, err
+	}
+
+	if tables["runtime_event"] && tables["runtime_comment"] && tables["notification_cursor"] {
+		return false, nil
+	}
+	if tables["event"] && tables["comment"] && tables["notification_cursor"] {
+		return false, nil
+	}
+
+	runtimeTables := allManagedRuntimeTables()
+	presentRuntimeTables := sortedPresentTables(tables, runtimeTables)
+	if len(presentRuntimeTables) > 0 {
+		if err := dropTables(ctx, sqlDB, reverseStrings(presentRuntimeTables)); err != nil {
+			return false, fmt.Errorf("reset partial dirty migration state: %w", err)
+		}
+	}
+
+	if err := migrator.Force(-1); err != nil {
+		return false, fmt.Errorf("clear dirty migration state: %w", err)
+	}
+
+	return true, nil
+}
+
 func listTables(ctx context.Context, sqlDB *sql.DB) (map[string]bool, error) {
 	rows, err := sqlDB.QueryContext(ctx, "SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE()")
 	if err != nil {
@@ -234,6 +282,15 @@ func missingTables(tables map[string]bool, names []string) string {
 	return strings.Join(missing, ", ")
 }
 
+func dropTables(ctx context.Context, sqlDB *sql.DB, tableNames []string) error {
+	for _, tableName := range tableNames {
+		if _, err := sqlDB.ExecContext(ctx, fmt.Sprintf("DROP TABLE IF EXISTS `%s`", tableName)); err != nil {
+			return fmt.Errorf("drop table %s: %w", tableName, err)
+		}
+	}
+	return nil
+}
+
 func sortedPresentTables(tables map[string]bool, names []string) []string {
 	present := make([]string, 0, len(names))
 	for _, name := range names {
@@ -245,11 +302,71 @@ func sortedPresentTables(tables map[string]bool, names []string) []string {
 	return present
 }
 
-func closeMigrator(migrator *migrate.Migrate) {
+func reverseStrings(values []string) []string {
+	reversed := make([]string, len(values))
+	copy(reversed, values)
+	for left, right := 0, len(reversed)-1; left < right; left, right = left+1, right-1 {
+		reversed[left], reversed[right] = reversed[right], reversed[left]
+	}
+	return reversed
+}
+
+func allManagedRuntimeTables() []string {
+	return []string{
+		"workspace",
+		"workspace_member",
+		"project_type",
+		"validation_report",
+		"project_type_version",
+		"project",
+		"project_participant",
+		"flow",
+		"task",
+		"assignment",
+		"artifact_instance",
+		"artifact_revision",
+		"review_session",
+		"review_decision",
+		"feedback_session",
+		"feedback_entry",
+		"notification_cursor",
+		"event",
+		"comment",
+		"runtime_event",
+		"runtime_comment",
+	}
+}
+
+func openMigrationDB(dsn string) (*sql.DB, error) {
+	cfg, err := mysql.ParseDSN(strings.TrimSpace(dsn))
+	if err != nil {
+		return nil, fmt.Errorf("parse mysql dsn for migrations: %w", err)
+	}
+	cfg.MultiStatements = true
+
+	migrationDB, err := sql.Open("mysql", cfg.FormatDSN())
+	if err != nil {
+		return nil, fmt.Errorf("open mysql migration connection: %w", err)
+	}
+	if err := migrationDB.Ping(); err != nil {
+		_ = migrationDB.Close()
+		return nil, fmt.Errorf("ping mysql migration connection: %w", err)
+	}
+
+	return migrationDB, nil
+}
+
+func closeMigrator(migrator *migrate.Migrate, sqlDB *sql.DB) {
 	if migrator == nil {
+		if sqlDB != nil {
+			_ = sqlDB.Close()
+		}
 		return
 	}
 	_, _ = migrator.Close()
+	if sqlDB != nil {
+		_ = sqlDB.Close()
+	}
 }
 
 func uintPtr(value uint) *uint {

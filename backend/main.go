@@ -39,7 +39,7 @@ func run() error {
 	defer database.Close()
 
 	if database.Ready && database.Gorm != nil {
-		if err := db.EnsureMigrations(context.Background(), database.SQL); err != nil {
+		if err := db.EnsureMigrations(context.Background(), cfg.MySQL.ConnectionString()); err != nil {
 			return err
 		}
 		if err := config.SeedDefaults(database.Gorm, cfg); err != nil {

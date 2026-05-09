@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"flag"
 	"log"
@@ -26,30 +25,25 @@ func main() {
 		log.Fatal("DB_DSN is required to run migrations")
 	}
 
-	sqlDB, err := sql.Open("mysql", dsn)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer sqlDB.Close()
-
 	ctx := context.Background()
 
 	switch *command {
 	case "up":
-		if err := db.EnsureMigrations(ctx, sqlDB); err != nil {
+		if err := db.EnsureMigrations(ctx, dsn); err != nil {
 			log.Fatal(err)
 		}
 		log.Printf("migration command %q completed\n", *command)
 		return
 	case "down":
-		m, err := db.OpenMigrator(sqlDB)
+		m, migrationDB, err := db.OpenMigrator(dsn)
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer func() {
 			_, _ = m.Close()
+			_ = migrationDB.Close()
 		}()
-		status, err := db.CurrentMigrationStatus(ctx, sqlDB)
+		status, err := db.CurrentMigrationStatus(ctx, dsn)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -61,8 +55,13 @@ func main() {
 		} else {
 			err = m.Down()
 		}
+		if err != nil && !errors.Is(err, migrate.ErrNoChange) {
+			log.Fatal(err)
+		}
+		log.Printf("migration command %q completed\n", *command)
+		return
 	case "version":
-		status, err := db.CurrentMigrationStatus(ctx, sqlDB)
+		status, err := db.CurrentMigrationStatus(ctx, dsn)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -79,10 +78,4 @@ func main() {
 	default:
 		log.Fatalf("unsupported command %q", *command)
 	}
-
-	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		log.Fatal(err)
-	}
-
-	log.Printf("migration command %q completed\n", *command)
 }
