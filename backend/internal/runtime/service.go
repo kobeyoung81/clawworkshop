@@ -990,8 +990,8 @@ func emitEvent(tx *gorm.DB, input eventInput) error {
 	event := &models.Event{
 		ID:             ids.New(),
 		WorkspaceID:    input.WorkspaceID,
-		ProjectID:      input.ProjectID,
-		FlowID:         input.FlowID,
+		ProjectID:      nullableID(input.ProjectID),
+		FlowID:         nullableID(input.FlowID),
 		Topic:          input.Topic,
 		SubjectType:    input.SubjectType,
 		SubjectID:      input.SubjectID,
@@ -1001,6 +1001,15 @@ func emitEvent(tx *gorm.DB, input eventInput) error {
 	}
 
 	return tx.Create(event).Error
+}
+
+func nullableID(value string) *string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil
+	}
+
+	return &value
 }
 
 func normalizedParticipants(actor auth.AuditActor, requested []ProjectParticipantInput) []ProjectParticipantInput {

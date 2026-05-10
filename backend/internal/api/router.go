@@ -96,10 +96,16 @@ func requestLogger(deps Dependencies) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			started := time.Now()
 			ww := chimiddleware.NewWrapResponseWriter(w, r.ProtoMajor)
+			requestLogger := deps.Logger.With(
+				"request_id", chimiddleware.GetReqID(r.Context()),
+				"method", r.Method,
+				"path", r.URL.Path,
+			)
+			r = r.WithContext(withLogger(r.Context(), requestLogger))
 
 			next.ServeHTTP(ww, r)
 
-			deps.Logger.Info("http request completed",
+			requestLogger.Info("http request completed",
 				"method", r.Method,
 				"path", r.URL.Path,
 				"status", ww.Status(),

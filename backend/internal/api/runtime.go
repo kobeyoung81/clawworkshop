@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"gorm.io/gorm"
 
 	"github.com/supremelosclaws/clawworkshop/backend/internal/auth"
@@ -332,6 +333,13 @@ func (d Dependencies) handleCreateProject(w http.ResponseWriter, r *http.Request
 		Actor:                auth.AuditActorFromActor(*actor),
 	})
 	if err != nil {
+		d.Logger.Error("project creation failed",
+			"request_id", middleware.GetReqID(r.Context()),
+			"workspace_id", request.WorkspaceID,
+			"project_type_version_id", request.ProjectTypeVersionID,
+			"actor_id", actor.ID,
+			"error", err,
+		)
 		switch err {
 		case store.ErrNotFound:
 			writeError(w, r, http.StatusNotFound, "project_type_version_not_found", "Published template version not found.")
@@ -999,8 +1007,8 @@ func (d Dependencies) handleListEvents(w http.ResponseWriter, r *http.Request) {
 			ID:             event.ID,
 			Seq:            event.Seq,
 			WorkspaceID:    event.WorkspaceID,
-			ProjectID:      event.ProjectID,
-			FlowID:         event.FlowID,
+			ProjectID:      optionalString(event.ProjectID),
+			FlowID:         optionalString(event.FlowID),
 			Topic:          event.Topic,
 			SubjectType:    event.SubjectType,
 			SubjectID:      event.SubjectID,
@@ -1012,6 +1020,14 @@ func (d Dependencies) handleListEvents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeData(w, http.StatusOK, response)
+}
+
+func optionalString(value *string) string {
+	if value == nil {
+		return ""
+	}
+
+	return *value
 }
 
 func (d Dependencies) handleUpdateEventCursor(w http.ResponseWriter, r *http.Request) {

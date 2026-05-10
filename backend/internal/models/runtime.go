@@ -159,8 +159,8 @@ type Event struct {
 	ID             string          `gorm:"column:id;type:char(26);primaryKey"`
 	Seq            int64           `gorm:"column:seq;autoIncrement;uniqueIndex"`
 	WorkspaceID    string          `gorm:"column:workspace_id;type:char(26);not null;index"`
-	ProjectID      string          `gorm:"column:project_id;type:char(26);index"`
-	FlowID         string          `gorm:"column:flow_id;type:char(26);index"`
+	ProjectID      *string         `gorm:"column:project_id;type:char(26);index"`
+	FlowID         *string         `gorm:"column:flow_id;type:char(26);index"`
 	Topic          string          `gorm:"column:topic;size:96;not null"`
 	SubjectType    string          `gorm:"column:subject_type;size:32;not null"`
 	SubjectID      string          `gorm:"column:subject_id;type:char(26);not null"`
