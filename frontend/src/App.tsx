@@ -22,12 +22,15 @@ function PageFrame({
   variant: 'landing' | 'dashboard';
   children: ReactNode;
 }) {
+  const mainClassName =
+    variant === 'dashboard'
+      ? 'w-full px-4 py-8 sm:px-6 lg:px-8'
+      : 'mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8';
+
   return (
     <div className="min-h-screen bg-bg text-text font-body selection:bg-accent-cyan/30 selection:text-accent-cyan">
       <TopNavbar variant={variant} />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {children}
-      </main>
+      <main className={mainClassName}>{children}</main>
     </div>
   );
 }

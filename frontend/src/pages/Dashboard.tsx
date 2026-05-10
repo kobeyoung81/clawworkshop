@@ -86,10 +86,6 @@ function DashboardLoading() {
         </div>
       </GlassPanel>
       <div className="space-y-6">
-        <GlassPanel className="p-6">
-          <div className="h-6 w-48 rounded shimmer-bg" />
-          <div className="mt-3 h-4 w-80 rounded shimmer-bg" />
-        </GlassPanel>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <GlassPanel key={index} className="p-5">
@@ -98,14 +94,9 @@ function DashboardLoading() {
             </GlassPanel>
           ))}
         </div>
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)]">
-          <GlassPanel className="min-h-[360px] p-6">
-            <div />
-          </GlassPanel>
-          <GlassPanel className="min-h-[360px] p-6">
-            <div />
-          </GlassPanel>
-        </div>
+        <GlassPanel className="min-h-[360px] p-6">
+          <div />
+        </GlassPanel>
       </div>
     </div>
   );
@@ -114,7 +105,6 @@ function DashboardLoading() {
 export function Dashboard() {
   const { t, lang } = useI18n();
   const queryClient = useQueryClient();
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [collapsedWorkspaceIds, setCollapsedWorkspaceIds] = useState<string[]>([]);
   const [isAddWorkspaceOpen, setIsAddWorkspaceOpen] = useState(false);
   const [workspaceName, setWorkspaceName] = useState('');
@@ -171,7 +161,6 @@ export function Dashboard() {
     [projects, workspaces],
   );
 
-  const selectedProject = selectedProjectId ? projects.find((project) => project.id === selectedProjectId) ?? null : null;
   const dataError = workspacesQuery.error ?? projectsQuery.error ?? tasksQuery.error;
 
   const stats = useMemo(
@@ -182,19 +171,6 @@ export function Dashboard() {
       readyTasks: taskItems.filter((item) => item.task.status === 'ready').length,
     }),
     [projects.length, taskItems, workspaces.length],
-  );
-
-  const projectStatusCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const project of projects) {
-      counts.set(project.status, (counts.get(project.status) ?? 0) + 1);
-    }
-    return Array.from(counts.entries()).sort(([left], [right]) => left.localeCompare(right));
-  }, [projects]);
-
-  const selectedProjectTasks = useMemo(
-    () => (selectedProject ? taskItems.filter((item) => item.projectId === selectedProject.id) : []),
-    [selectedProject, taskItems],
   );
 
   const toggleWorkspace = (workspaceId: string) => {
@@ -319,27 +295,17 @@ export function Dashboard() {
                     {expanded ? (
                       <div className="border-t border-white/6 px-2 py-2">
                         {group.projects.length > 0 ? (
-                          group.projects.map((project) => {
-                            const isSelected = selectedProjectId === project.id;
-                            return (
-                              <button
-                                key={project.id}
-                                type="button"
-                                onClick={() => setSelectedProjectId((current) => (current === project.id ? null : project.id))}
-                                className={`mb-1 flex w-full items-start justify-between gap-3 rounded-xl px-3 py-2 text-left transition-all ${
-                                  isSelected
-                                    ? 'bg-accent-cyan/10 text-white ring-1 ring-accent-cyan/25'
-                                    : 'text-text-muted hover:bg-white/3 hover:text-white'
-                                }`}
-                              >
-                                <div className="min-w-0">
-                                  <div className="truncate text-sm font-medium">{project.name}</div>
-                                  <div className="mt-1 text-[11px] font-mono uppercase tracking-[0.16em]">{t(`dashboard.statuses.${project.status}`)}</div>
-                                </div>
-                                {isSelected ? <span className="text-accent-cyan">•</span> : null}
-                              </button>
-                            );
-                          })
+                          group.projects.map((project) => (
+                            <div
+                              key={project.id}
+                              className="mb-1 flex items-start justify-between gap-3 rounded-xl px-3 py-2 text-left text-text-muted transition-all hover:bg-white/3 hover:text-white"
+                            >
+                              <div className="min-w-0">
+                                <div className="truncate text-sm font-medium">{project.name}</div>
+                                <div className="mt-1 text-[11px] font-mono uppercase tracking-[0.16em]">{t(`dashboard.statuses.${project.status}`)}</div>
+                              </div>
+                            </div>
+                          ))
                         ) : (
                           <div className="px-3 py-2 text-sm text-text-muted">{t('dashboard.no_projects_in_workspace')}</div>
                         )}
@@ -433,20 +399,6 @@ export function Dashboard() {
         </GlassPanel>
 
         <div className="space-y-6">
-          <GlassPanel accentColor="cyan" className="p-6">
-            <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-              <div>
-                <div className="font-mono text-xs uppercase tracking-[0.3em] text-accent-cyan/70">{t('dashboard.eyebrow')}</div>
-                <h1 className="mt-3 text-4xl font-bold text-white text-glow-cyan">{t('dashboard.title')}</h1>
-                <p className="mt-3 max-w-3xl text-sm leading-7 text-text-muted">{t('dashboard.desc')}</p>
-              </div>
-              <div className="rounded-2xl border border-white/8 bg-black/10 px-4 py-3">
-                <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-text-muted">{t('dashboard.signed_in_as')}</div>
-                <div className="mt-1 text-sm font-semibold text-white">{actor.name || actor.email || actor.id}</div>
-              </div>
-            </div>
-          </GlassPanel>
-
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <StatCard label={t('dashboard.stats.workspaces')} value={formatCount(stats.workspaces, lang)} accent="cyan" />
             <StatCard label={t('dashboard.stats.projects')} value={formatCount(stats.projects, lang)} accent="amber" />
@@ -454,150 +406,66 @@ export function Dashboard() {
             <StatCard label={t('dashboard.stats.ready_tasks')} value={formatCount(stats.readyTasks, lang)} accent="cyan" />
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)]">
-            <GlassPanel className="p-6">
-              <div className="mb-5 flex items-end justify-between gap-4">
-                <div>
-                  <div className="font-mono text-xs uppercase tracking-[0.24em] text-accent-cyan/60">{t('dashboard.tasks_eyebrow')}</div>
-                  <h2 className="mt-2 text-2xl font-semibold text-white">{t('dashboard.tasks_title')}</h2>
-                </div>
-                <div className="text-sm text-text-muted">{t('dashboard.tasks_count', { count: taskItems.length })}</div>
+          <GlassPanel className="p-6">
+            <div className="mb-5 flex items-end justify-between gap-4">
+              <div>
+                <div className="font-mono text-xs uppercase tracking-[0.24em] text-accent-cyan/60">{t('dashboard.tasks_eyebrow')}</div>
+                <h2 className="mt-2 text-2xl font-semibold text-white">{t('dashboard.tasks_title')}</h2>
               </div>
-
-              {tasksQuery.isPending ? (
-                <div className="space-y-3">
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <div key={index} className="rounded-2xl border border-white/8 p-4">
-                      <div className="h-4 w-48 rounded shimmer-bg" />
-                      <div className="mt-3 h-3 rounded shimmer-bg" />
-                    </div>
-                  ))}
-                </div>
-              ) : taskItems.length > 0 ? (
-                <div className="space-y-3">
-                  {taskItems.map((item) => {
-                    const workspace = workspaceById.get(item.workspaceId);
-                    return (
-                      <div key={item.task.id} className="rounded-2xl border border-white/8 bg-black/10 p-4 transition-colors hover:border-accent-cyan/15">
-                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="truncate text-lg font-semibold text-white">
-                              {item.task.title || item.task.nodeKey}
-                              </h3>
-                              <span className={`rounded-full border px-2.5 py-1 text-[11px] font-mono uppercase tracking-[0.16em] ${statusTone(item.task.status)}`}>
-                                {t(`dashboard.statuses.${item.task.status}`)}
-                              </span>
-                            </div>
-                            <p className="mt-2 text-sm text-text-muted">
-                              {workspace?.name ?? t('dashboard.unknown_workspace')} / {item.projectName}
-                            </p>
-                            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-mono uppercase tracking-[0.16em] text-text-muted">
-                              <span>{item.workflowKey}</span>
-                              <span className="text-white/15">•</span>
-                              <span>{t('dashboard.flow_label', { flow: item.flowSequence })}</span>
-                              <span className="text-white/15">•</span>
-                              <span>{item.task.nodeKind}</span>
-                              {item.task.role ? (
-                                <>
-                                  <span className="text-white/15">•</span>
-                                  <span>{item.task.role}</span>
-                                </>
-                              ) : null}
-                            </div>
-                          </div>
-
-                          {selectedProject && selectedProject.id === item.projectId ? (
-                            <div className="rounded-full border border-accent-cyan/20 bg-accent-cyan/8 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.18em] text-accent-cyan">
-                              {t('dashboard.selected_project_badge')}
-                            </div>
-                          ) : null}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-white/8 bg-black/10 px-4 py-8 text-sm text-text-muted">
-                  {t('dashboard.no_active_tasks')}
-                </div>
-              )}
-            </GlassPanel>
-
-            <div className="space-y-6">
-              <GlassPanel accentColor="amber" className="p-6">
-                <div className="font-mono text-xs uppercase tracking-[0.24em] text-accent-amber/70">{t('dashboard.project_focus_eyebrow')}</div>
-                <h2 className="mt-2 text-2xl font-semibold text-white">{t('dashboard.project_focus_title')}</h2>
-
-                {selectedProject ? (
-                  <div className="mt-5 space-y-4">
-                    <div>
-                      <div className="text-lg font-semibold text-white">{selectedProject.name}</div>
-                      <div className="mt-1 text-sm text-text-muted">
-                        {workspaceById.get(selectedProject.workspaceId)?.name ?? t('dashboard.unknown_workspace')}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <span className={`rounded-full border px-2.5 py-1 text-[11px] font-mono uppercase tracking-[0.16em] ${statusTone(selectedProject.status)}`}>
-                        {t(`dashboard.statuses.${selectedProject.status}`)}
-                      </span>
-                      {selectedProject.actorProjectRole ? (
-                        <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-mono uppercase tracking-[0.16em] text-white">
-                          {selectedProject.actorProjectRole}
-                        </span>
-                      ) : null}
-                    </div>
-
-                    <p className="text-sm leading-7 text-text-muted">
-                      {selectedProject.description || t('dashboard.project_no_description')}
-                    </p>
-
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-2xl border border-white/8 bg-black/10 px-4 py-3">
-                        <div className="text-[11px] font-mono uppercase tracking-[0.16em] text-text-muted">
-                          {t('dashboard.project_version')}
-                        </div>
-                        <div className="mt-2 text-xl font-semibold text-white">{selectedProject.version}</div>
-                      </div>
-                      <div className="rounded-2xl border border-white/8 bg-black/10 px-4 py-3">
-                        <div className="text-[11px] font-mono uppercase tracking-[0.16em] text-text-muted">
-                          {t('dashboard.project_active_tasks')}
-                        </div>
-                        <div className="mt-2 text-xl font-semibold text-white">{selectedProjectTasks.length}</div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-5 rounded-2xl border border-white/8 bg-black/10 px-4 py-6 text-sm leading-7 text-text-muted">
-                    {t('dashboard.no_project_selected')}
-                  </div>
-                )}
-              </GlassPanel>
-
-              <GlassPanel className="p-6">
-                <div className="font-mono text-xs uppercase tracking-[0.24em] text-accent-cyan/60">{t('dashboard.project_stats_eyebrow')}</div>
-                <h2 className="mt-2 text-2xl font-semibold text-white">{t('dashboard.project_stats_title')}</h2>
-
-                <div className="mt-5 space-y-3">
-                  {projectStatusCounts.length > 0 ? (
-                    projectStatusCounts.map(([status, count]) => (
-                      <div key={status} className="flex items-center justify-between rounded-2xl border border-white/8 bg-black/10 px-4 py-3">
-                        <span className="text-sm text-white">{t(`dashboard.statuses.${status}`)}</span>
-                        <span className={`rounded-full border px-2.5 py-1 text-[11px] font-mono uppercase tracking-[0.16em] ${statusTone(status)}`}>
-                          {formatCount(count, lang)}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="rounded-2xl border border-white/8 bg-black/10 px-4 py-6 text-sm text-text-muted">
-                      {t('dashboard.no_projects')}
-                    </div>
-                  )}
-                </div>
-              </GlassPanel>
+              <div className="text-sm text-text-muted">{t('dashboard.tasks_count', { count: taskItems.length })}</div>
             </div>
-          </div>
+
+            {tasksQuery.isPending ? (
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="rounded-2xl border border-white/8 p-4">
+                    <div className="h-4 w-48 rounded shimmer-bg" />
+                    <div className="mt-3 h-3 rounded shimmer-bg" />
+                  </div>
+                ))}
+              </div>
+            ) : taskItems.length > 0 ? (
+              <div className="space-y-3">
+                {taskItems.map((item) => {
+                  const workspace = workspaceById.get(item.workspaceId);
+                  return (
+                    <div key={item.task.id} className="rounded-2xl border border-white/8 bg-black/10 p-4 transition-colors hover:border-accent-cyan/15">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="truncate text-lg font-semibold text-white">{item.task.title || item.task.nodeKey}</h3>
+                            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-mono uppercase tracking-[0.16em] ${statusTone(item.task.status)}`}>
+                              {t(`dashboard.statuses.${item.task.status}`)}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm text-text-muted">
+                            {workspace?.name ?? t('dashboard.unknown_workspace')} / {item.projectName}
+                          </p>
+                          <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-mono uppercase tracking-[0.16em] text-text-muted">
+                            <span>{item.workflowKey}</span>
+                            <span className="text-white/15">•</span>
+                            <span>{t('dashboard.flow_label', { flow: item.flowSequence })}</span>
+                            <span className="text-white/15">•</span>
+                            <span>{item.task.nodeKind}</span>
+                            {item.task.role ? (
+                              <>
+                                <span className="text-white/15">•</span>
+                                <span>{item.task.role}</span>
+                              </>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-white/8 bg-black/10 px-4 py-8 text-sm text-text-muted">
+                {t('dashboard.no_active_tasks')}
+              </div>
+            )}
+          </GlassPanel>
         </div>
       </div>
     </div>
