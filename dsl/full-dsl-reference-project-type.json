@@ -1,0 +1,242 @@
+{
+  "project_type": {
+    "id": "full_dsl_reference",
+    "name": "Full DSL Reference Template",
+    "version": "1.0.0",
+    "description": "A comprehensive starter template that exercises every supported DSL element: parameters, human and agent roles, project/workflow/node-scoped artifacts, all node kinds, and explicit outcome-based edges.",
+    "parameters": [
+      {
+        "id": "product_name",
+        "type": "string",
+        "required": true,
+        "default": "Claw Workshop Reference",
+        "description": "Display name for projects created from this template."
+      },
+      {
+        "id": "target_user_count",
+        "type": "number",
+        "required": false,
+        "default": 1000,
+        "description": "Expected user-count scale used to guide planning depth."
+      },
+      {
+        "id": "needs_human_signoff",
+        "type": "boolean",
+        "required": false,
+        "default": true,
+        "description": "Whether final approval must include an explicit human sign-off."
+      },
+      {
+        "id": "research_profile",
+        "type": "object",
+        "required": false,
+        "default": {
+          "segment": "b2b",
+          "region": "global"
+        },
+        "description": "Structured research context supplied at project creation time."
+      },
+      {
+        "id": "delivery_channels",
+        "type": "array",
+        "required": false,
+        "default": [
+          "web",
+          "mobile"
+        ],
+        "description": "The primary delivery channels that should shape the output."
+      }
+    ],
+    "roles": [
+      {
+        "id": "human_owner",
+        "kind": "human",
+        "description": "The human owner who provides source context, gives feedback, and approves deliverables.",
+        "default_prompt": "You are the accountable owner. Provide clear business context, judge quality rigorously, and only approve work that is ready to execute."
+      },
+      {
+        "id": "product_agent",
+        "kind": "agent",
+        "description": "Agent responsible for turning source context into structured product requirements.",
+        "default_prompt": "You are a senior product manager. Produce complete, concrete, and implementation-ready product requirements."
+      },
+      {
+        "id": "design_agent",
+        "kind": "agent",
+        "description": "Agent responsible for turning approved requirements into visual planning artifacts.",
+        "default_prompt": "You are a senior product designer. Produce clear low-fidelity visual deliverables that match the approved requirements."
+      }
+    ],
+    "artifacts": [
+      {
+        "id": "brief.md",
+        "description": "Initial project brief shared across the entire project type.",
+        "content_kind": "markdown",
+        "schema_hint": "sections: problem, users, goals, constraints"
+      },
+      {
+        "id": "brand-board.png",
+        "description": "Reference image that captures visual direction for the project.",
+        "content_kind": "image"
+      }
+    ],
+    "workflow_types": [
+      {
+        "id": "discovery_delivery_workflow",
+        "description": "Capture a brief, draft and revise a PRD, approve it, and produce a wireframe deliverable.",
+        "artifacts": [
+          {
+            "id": "prd.md",
+            "description": "Workflow-scoped product requirements document.",
+            "content_kind": "markdown",
+            "schema_hint": "sections: scope, requirements, acceptance_criteria"
+          },
+          {
+            "id": "wireframe.png",
+            "description": "Workflow-scoped wireframe output.",
+            "content_kind": "image"
+          }
+        ],
+        "nodes": [
+          {
+            "id": "provide_brief",
+            "kind": "input",
+            "title": "Provide Brief",
+            "description": "Capture the initial brief and supporting context for the project.",
+            "role": "human_owner",
+            "prompt": "Provide the problem statement, user context, constraints, success criteria, and any visual references needed to start planning.",
+            "reads": [],
+            "writes": [
+              "brief.md",
+              "brand-board.png"
+            ]
+          },
+          {
+            "id": "draft_prd",
+            "kind": "work",
+            "title": "Draft PRD",
+            "description": "Produce the first PRD draft from the brief and brand guidance.",
+            "role": "product_agent",
+            "prompt": "Turn the available context into a structured PRD with clear scope, requirements, assumptions, and acceptance criteria.",
+            "reads": [
+              "brief.md",
+              "brand-board.png"
+            ],
+            "writes": [
+              "prd.md"
+            ]
+          },
+          {
+            "id": "collect_feedback",
+            "kind": "feedback",
+            "title": "Collect Feedback",
+            "description": "Gather human commentary on the drafted PRD before formal approval.",
+            "role": "human_owner",
+            "prompt": "Review the draft PRD and provide specific revision guidance, missing constraints, and risks that should be addressed.",
+            "reads": [
+              "prd.md"
+            ]
+          },
+          {
+            "id": "revise_prd",
+            "kind": "work",
+            "title": "Revise PRD",
+            "description": "Revise the PRD based on the internal feedback context from upstream review or feedback.",
+            "role": "product_agent",
+            "prompt": "Update the PRD to resolve all provided human guidance while keeping the document consistent and executable.",
+            "reads": [
+              "brief.md",
+              "prd.md"
+            ],
+            "writes": [
+              "prd.md"
+            ]
+          },
+          {
+            "id": "approve_prd",
+            "kind": "review",
+            "title": "Approve PRD",
+            "description": "Approve the PRD or route it back for another revision cycle.",
+            "role": "human_owner",
+            "prompt": "Approve only when the PRD is ready to guide downstream execution; otherwise request revision with concrete direction.",
+            "reads": [
+              "prd.md"
+            ]
+          },
+          {
+            "id": "create_wireframe",
+            "kind": "work",
+            "title": "Create Wireframe",
+            "description": "Produce visual planning assets from the approved PRD.",
+            "role": "design_agent",
+            "prompt": "Create a low-fidelity wireframe aligned with the approved PRD and visual direction.",
+            "reads": [
+              "prd.md",
+              "brand-board.png"
+            ],
+            "writes": [
+              "wireframe.png",
+              "wireframe-notes.md",
+              "wireframe-preview.png"
+            ],
+            "artifacts": [
+              {
+                "id": "wireframe-notes.md",
+                "description": "Node-scoped rationale describing the wireframe decisions.",
+                "content_kind": "markdown",
+                "schema_hint": "sections: rationale, open_questions"
+              },
+              {
+                "id": "wireframe-preview.png",
+                "description": "Node-scoped preview image local to the wireframe node.",
+                "content_kind": "image"
+              }
+            ]
+          },
+          {
+            "id": "finish",
+            "kind": "end",
+            "title": "Workflow Complete"
+          }
+        ],
+        "edges": [
+          {
+            "from": "provide_brief",
+            "to": "draft_prd",
+            "on": "completed"
+          },
+          {
+            "from": "draft_prd",
+            "to": "collect_feedback",
+            "on": "completed"
+          },
+          {
+            "from": "collect_feedback",
+            "to": "revise_prd",
+            "on": "completed"
+          },
+          {
+            "from": "revise_prd",
+            "to": "approve_prd",
+            "on": "completed"
+          },
+          {
+            "from": "approve_prd",
+            "to": "create_wireframe",
+            "on": "approved"
+          },
+          {
+            "from": "approve_prd",
+            "to": "revise_prd",
+            "on": "revise"
+          },
+          {
+            "from": "create_wireframe",
+            "to": "finish",
+            "on": "completed"
+          }
+        ]
+      }
+    ]
+  }
+}
