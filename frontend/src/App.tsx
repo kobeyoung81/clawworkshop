@@ -4,6 +4,10 @@ import { Route, Routes } from 'react-router-dom';
 import { I18nProvider } from './i18n';
 import { TopNavbar } from './components/layout/TopNavbar';
 import { Dashboard } from './pages/Dashboard';
+import { DashboardHomeView } from './pages/dashboard/DashboardHomeView';
+import { ProjectCreateView } from './pages/dashboard/ProjectCreateView';
+import { ProjectView } from './pages/dashboard/ProjectView';
+import { WorkspaceView } from './pages/dashboard/WorkspaceView';
 import { Home } from './pages/Home';
 
 const queryClient = new QueryClient({
@@ -53,7 +57,12 @@ function RoutedApp() {
             <Dashboard />
           </PageFrame>
         }
-      />
+      >
+        <Route index element={<DashboardHomeView />} />
+        <Route path="workspaces/:workspaceId" element={<WorkspaceView />} />
+        <Route path="workspaces/:workspaceId/projects/new" element={<ProjectCreateView />} />
+        <Route path="projects/:projectId" element={<ProjectView />} />
+      </Route>
       <Route
         path="*"
         element={

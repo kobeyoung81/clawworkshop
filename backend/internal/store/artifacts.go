@@ -35,6 +35,18 @@ func (r *ArtifactRepository) ListByProject(ctx context.Context, projectID string
 	return artifacts, err
 }
 
+func (r *ArtifactRepository) ListByWorkspace(ctx context.Context, workspaceID string) ([]models.ArtifactInstance, error) {
+	var artifacts []models.ArtifactInstance
+	err := r.db.WithContext(ctx).
+		Table("artifact_instance").
+		Joins("JOIN project ON project.id = artifact_instance.project_id").
+		Where("project.workspace_id = ?", workspaceID).
+		Order("project.name ASC").
+		Order("artifact_instance.artifact_key ASC").
+		Find(&artifacts).Error
+	return artifacts, err
+}
+
 func (r *ArtifactRepository) ListRevisions(ctx context.Context, artifactID string) ([]models.ArtifactRevision, error) {
 	var revisions []models.ArtifactRevision
 	err := r.db.WithContext(ctx).

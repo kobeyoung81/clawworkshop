@@ -70,6 +70,34 @@ export interface ProjectSummary {
   actorProjectRole?: string;
 }
 
+export interface ProjectParticipant {
+  id: string;
+  subjectId: string;
+  subjectType: string;
+  role: string;
+  status: string;
+}
+
+export interface ProjectDetail extends ProjectSummary {
+  projectTypeId?: string;
+  parameterValuesJson?: unknown;
+  templateWorkflowKeys?: string[];
+  participants?: ProjectParticipant[];
+}
+
+export interface CreateProjectInput {
+  workspaceId: string;
+  projectTypeVersionId: string;
+  name: string;
+  description: string;
+  parameterValuesJson: unknown;
+  participants?: Array<{
+    subjectId: string;
+    subjectType: string;
+    role: string;
+  }>;
+}
+
 export interface TaskSummary {
   id: string;
   flowId: string;
@@ -97,4 +125,63 @@ export interface TaskInboxItem {
   flowSequence: number;
   actorProjectRole?: string;
   task: TaskSummary;
+}
+
+export interface FlowSummary {
+  id: string;
+  projectId: string;
+  workflowKey: string;
+  flowSequence: number;
+  status: string;
+  blockedReason?: string;
+  version: number;
+  tasks?: TaskSummary[];
+}
+
+export interface ArtifactRevisionSummary {
+  id: string;
+  revisionNo: number;
+  contentKind: string;
+  mimeType: string;
+  byteSize: number;
+  checksumSha256?: string;
+  createdBy: string;
+  baseRevisionNo: number;
+  createdAt: string;
+  bodyText?: string;
+  bodyJson?: unknown;
+  bodyBase64?: string;
+}
+
+export interface ArtifactSummary {
+  id: string;
+  projectId: string;
+  artifactKey: string;
+  scopeType: string;
+  scopeRef: string;
+  currentRevisionNo: number;
+  version: number;
+  currentRevision?: ArtifactRevisionSummary;
+  revisions?: ArtifactRevisionSummary[];
+}
+
+export interface ProjectTypeSummary {
+  id: string;
+  workspaceId: string;
+  key: string;
+  title: string;
+  description: string;
+  status: string;
+  version: number;
+  currentDraftJson?: unknown;
+}
+
+export interface ProjectTypeVersionSummary {
+  id: string;
+  projectTypeId: string;
+  versionNo: number;
+  publishedSnapshotJson?: unknown;
+  summaryJson?: unknown;
+  publishedBy: string;
+  publishedAt: string;
 }

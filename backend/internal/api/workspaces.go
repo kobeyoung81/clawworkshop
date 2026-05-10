@@ -202,6 +202,49 @@ func (d Dependencies) handleGetWorkspace(w http.ResponseWriter, r *http.Request)
 	})
 }
 
+func (d Dependencies) handleListWorkspaceArtifacts(w http.ResponseWriter, r *http.Request) {
+	if !databaseReady(d) {
+		writeError(w, r, http.StatusServiceUnavailable, "database_unavailable", "Database connection is unavailable.")
+		return
+	}
+
+	actor, ok := currentActor(r)
+	if !ok {
+		writeError(w, r, http.StatusUnauthorized, "unauthenticated", "Authentication required.")
+		return
+	}
+
+	workspaceID := chi.URLParam(r, "id")
+	if _, err := d.Authorizer.WorkspaceRole(r.Context(), workspaceID, actor); err != nil {
+		status := http.StatusForbidden
+		code := "workspace_forbidden"
+		if err == auth.ErrMembershipMissing {
+			status = http.StatusNotFound
+			code = "workspace_not_found"
+		}
+		writeError(w, r, status, code, "Workspace access denied.")
+		return
+	}
+
+	artifacts, err := d.Store.Artifacts.ListByWorkspace(r.Context(), workspaceID)
+	if err != nil {
+		writeError(w, r, http.StatusInternalServerError, "workspace_artifact_list_failed", "Failed to list workspace artifacts.")
+		return
+	}
+
+	response := make([]artifactResponse, 0, len(artifacts))
+	for i := range artifacts {
+		artifactResponse, buildErr := d.buildArtifactResponse(r.Context(), &artifacts[i], false)
+		if buildErr != nil {
+			writeError(w, r, http.StatusInternalServerError, "workspace_artifact_lookup_failed", "Failed to build workspace artifact list.")
+			return
+		}
+		response = append(response, artifactResponse)
+	}
+
+	writeData(w, http.StatusOK, response)
+}
+
 func (d Dependencies) handleListWorkspaceMembers(w http.ResponseWriter, r *http.Request) {
 	if !databaseReady(d) {
 		writeError(w, r, http.StatusServiceUnavailable, "database_unavailable", "Database connection is unavailable.")
