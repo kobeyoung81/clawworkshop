@@ -133,7 +133,8 @@ function StatsGrid({ counters, lang }: { counters: DistrictCounters | undefined;
 function SkillBox() {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
-  const text = t('home.skill_prompt', { url: getClawWorkshopSkillURL() });
+  const skillUrl = getClawWorkshopSkillURL();
+  const text = t('home.skill_prompt', { url: skillUrl });
 
   const handleCopy = () => {
     navigator.clipboard.writeText(text).then(() => {
@@ -155,6 +156,14 @@ function SkillBox() {
         </button>
         <code className="whitespace-pre-wrap font-mono text-sm leading-relaxed text-text-muted">{text}</code>
       </div>
+      <a
+        href={skillUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="mt-3 inline-flex text-xs font-mono uppercase tracking-[0.22em] text-accent-cyan transition-opacity hover:opacity-80"
+      >
+        {t('home.skill_open')} ↗
+      </a>
     </div>
   );
 }

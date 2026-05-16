@@ -23,11 +23,14 @@ WORKDIR /app
 COPY --from=backend-builder /out/clawworkshop /app/clawworkshop
 COPY --from=backend-builder /out/migrate /app/migrate
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html
+COPY skill/ /usr/share/nginx/html/skill/
 
 RUN rm -f /etc/nginx/http.d/default.conf
 COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 COPY docker/supervisord.conf /etc/supervisord.conf
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 EXPOSE 80
 
-CMD ["supervisord", "-c", "/etc/supervisord.conf"]
+ENTRYPOINT ["/entrypoint.sh"]

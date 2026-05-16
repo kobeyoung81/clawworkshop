@@ -142,26 +142,11 @@ func detectLegacyBaseline(ctx context.Context, sqlDB *sql.DB) (*uint, error) {
 		return nil, err
 	}
 
-	baseRuntimeTables := []string{
-		"workspace",
-		"workspace_member",
-		"project_type",
-		"validation_report",
-		"project_type_version",
-		"project",
-		"project_participant",
-		"flow",
-		"task",
-		"assignment",
-		"artifact_instance",
-		"artifact_revision",
-		"review_session",
-		"review_decision",
-		"feedback_session",
-		"feedback_entry",
-		"notification_cursor",
-	}
+	return legacyBaselineFromTables(tables)
+}
 
+func legacyBaselineFromTables(tables map[string]bool) (*uint, error) {
+	baseRuntimeTables := workshopBaseRuntimeTables()
 	hasAllBaseRuntimeTables := hasAllTables(tables, baseRuntimeTables...)
 	hasLegacyRuntimeTables := hasAllTables(tables, "event", "comment")
 	hasRenamedRuntimeTables := hasAllTables(tables, "runtime_event", "runtime_comment")
@@ -188,12 +173,9 @@ func detectLegacyBaseline(ctx context.Context, sqlDB *sql.DB) (*uint, error) {
 		return nil, fmt.Errorf("detected inconsistent runtime schema: base tables exist but neither legacy nor renamed runtime tables are complete")
 	}
 
-	if hasAnyTables(tables, append(baseRuntimeTables, "event", "comment", "runtime_event", "runtime_comment")...) {
-		return nil, fmt.Errorf("detected partial legacy schema without migration tracking; present tables: %s", strings.Join(sortedPresentTables(tables, append(baseRuntimeTables, "event", "comment", "runtime_event", "runtime_comment", "app_configs")), ", "))
-	}
-
-	if hasAppConfigs {
-		return nil, nil
+	managedTables := allManagedSchemaTablesForBaselineDetection()
+	if hasAnyTables(tables, managedTables...) {
+		return nil, fmt.Errorf("detected partial workshop schema without migration tracking; present tables: %s", strings.Join(sortedPresentTables(tables, managedTables), ", "))
 	}
 
 	return nil, nil
@@ -335,6 +317,34 @@ func allManagedRuntimeTables() []string {
 		"runtime_event",
 		"runtime_comment",
 	}
+}
+
+func workshopBaseRuntimeTables() []string {
+	return []string{
+		"workspace",
+		"workspace_member",
+		"project_type",
+		"validation_report",
+		"project_type_version",
+		"project",
+		"project_participant",
+		"flow",
+		"task",
+		"assignment",
+		"artifact_instance",
+		"artifact_revision",
+		"review_session",
+		"review_decision",
+		"feedback_session",
+		"feedback_entry",
+		"notification_cursor",
+	}
+}
+
+func allManagedSchemaTablesForBaselineDetection() []string {
+	managedTables := append([]string{}, workshopBaseRuntimeTables()...)
+	managedTables = append(managedTables, "event", "comment", "runtime_event", "runtime_comment", "app_configs")
+	return managedTables
 }
 
 func openMigrationDB(dsn string) (*sql.DB, error) {

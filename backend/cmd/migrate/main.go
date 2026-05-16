@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"log"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang-migrate/migrate/v4"
@@ -14,9 +15,17 @@ import (
 )
 
 func main() {
-	command := flag.String("command", "up", "migration command: up, down, version")
+	commandFlag := flag.String("command", "", "migration command: up, down, version, status")
 	steps := flag.Int("steps", 0, "number of down steps to apply when command=down")
 	flag.Parse()
+
+	command, err := resolveCommand(*commandFlag, flag.Args())
+	if err != nil {
+		log.Fatal(err)
+	}
+	if *steps < 0 {
+		log.Fatal("steps must be >= 0")
+	}
 
 	cfg := config.LoadInitial()
 
@@ -27,12 +36,12 @@ func main() {
 
 	ctx := context.Background()
 
-	switch *command {
+	switch command {
 	case "up":
 		if err := db.EnsureMigrations(ctx, dsn); err != nil {
 			log.Fatal(err)
 		}
-		log.Printf("migration command %q completed\n", *command)
+		log.Printf("migration command %q completed\n", command)
 		return
 	case "down":
 		m, migrationDB, err := db.OpenMigrator(dsn)
@@ -58,24 +67,65 @@ func main() {
 		if err != nil && !errors.Is(err, migrate.ErrNoChange) {
 			log.Fatal(err)
 		}
-		log.Printf("migration command %q completed\n", *command)
+		log.Printf("migration command %q completed\n", command)
 		return
-	case "version":
+	case "version", "status":
 		status, err := db.CurrentMigrationStatus(ctx, dsn)
 		if err != nil {
 			log.Fatal(err)
 		}
-		if status.Version == nil {
-			if status.LegacyBaseline != nil {
-				log.Printf("version: none (legacy schema detected; startup or command=up will adopt baseline %d)\n", *status.LegacyBaseline)
-				return
-			}
-			log.Println("version: none")
-			return
-		}
-		log.Printf("version: %d dirty=%t\n", *status.Version, status.Dirty)
+		logMigrationStatus(command, status)
 		return
 	default:
-		log.Fatalf("unsupported command %q", *command)
+		log.Fatalf("unsupported command %q", command)
 	}
+}
+
+func resolveCommand(commandFlag string, args []string) (string, error) {
+	commandFlag = strings.TrimSpace(commandFlag)
+	if len(args) == 0 {
+		if commandFlag == "" {
+			return "up", nil
+		}
+		return commandFlag, nil
+	}
+
+	commandArg := strings.TrimSpace(args[0])
+	if commandArg == "" {
+		return "", errors.New("migration command cannot be empty")
+	}
+	if len(args) > 1 {
+		return "", errors.New("unexpected extra arguments after migration command")
+	}
+	if commandFlag != "" && commandFlag != commandArg {
+		return "", errors.New("received conflicting migration commands from positional argument and -command flag")
+	}
+	if commandFlag != "" {
+		return commandFlag, nil
+	}
+	return commandArg, nil
+}
+
+func logMigrationStatus(command string, status db.MigrationStatus) {
+	if status.Version == nil {
+		if status.LegacyBaseline != nil {
+			if command == "status" {
+				log.Printf("status: version=none adoptableBaseline=%d\n", *status.LegacyBaseline)
+				return
+			}
+			log.Printf("version: none (existing schema detected; startup or command=up will adopt baseline %d)\n", *status.LegacyBaseline)
+			return
+		}
+		if command == "status" {
+			log.Println("status: version=none")
+			return
+		}
+		log.Println("version: none")
+		return
+	}
+	if command == "status" {
+		log.Printf("status: version=%d dirty=%t\n", *status.Version, status.Dirty)
+		return
+	}
+	log.Printf("version: %d dirty=%t\n", *status.Version, status.Dirty)
 }

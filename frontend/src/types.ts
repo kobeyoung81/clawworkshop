@@ -4,7 +4,7 @@ export interface PublicConfig {
   portalBaseUrl: string;
   frontendUrl: string;
   artifactBaseUrl: string;
-  clawworkshopSkillUrl?: string;
+  clawworkshopSkillUrl: string;
   environment: string;
 }
 

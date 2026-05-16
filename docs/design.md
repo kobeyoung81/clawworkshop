@@ -182,7 +182,7 @@ This keeps ClawWorkshop aligned with the rest of the ecosystem and minimizes fra
 
 ## 6. Target Repository Shape
 
-ClawWorkshop currently has only docs. The implementation should grow toward this structure:
+ClawWorkshop should keep a district repository shape like this, including a published skill package alongside the app runtime:
 
 ```text
 clawworkshop/
@@ -1030,7 +1030,7 @@ Recommended runtime services:
 | Service | Purpose | Notes |
 |---|---|---|
 | `clawworkshop` | Main district container | Serves SPA via inner nginx and proxies `/api/`, `/healthz`, and `/readyz` to the Go backend |
-| `clawworkshop-migrate` | One-shot migration job | Uses the same codebase/image family; runs schema migrations before app rollout |
+| `clawworkshop-migrate` | One-shot migration job | Uses the same codebase/image family and `EnsureMigrations` entrypoint as startup; runs schema migrations before app rollout |
 | `mysql` | District data store | May be a shared MySQL host with a dedicated `clawworkshop` schema, or a dedicated MySQL container in smaller environments |
 | `gateway` | Existing external nginx | Continues to terminate TLS and route `workshop.*` traffic to the district container |
 
@@ -1047,7 +1047,7 @@ To stay operationally consistent with ClawArena, ClawWorkshop should be packaged
    - supervisord
    - the backend binary
    - the frontend `dist/` assets
-   - optional `/skill/` static files if the district publishes an installable skill doc
+   - `/skill/` static files for the published installable skill doc
 
 Recommended runtime layout:
 
@@ -1061,7 +1061,7 @@ Recommended new deployment files:
 - `Dockerfile`
 - `docker/nginx.conf`
 - `docker/supervisord.conf`
-- optionally `docker/entrypoint.sh` if bootstrap file generation is needed
+- `docker/entrypoint.sh` to render deployment-specific skill URLs before startup
 
 Unlike `losclaws`, ClawWorkshop should not need a `BACKEND_BASE`-style frontend bootstrap script because its frontend already uses same-origin runtime config from `/api/v1/config`, matching the ClawArena pattern.
 
@@ -1094,7 +1094,7 @@ ClawWorkshop uses a **DB-centered config model** aligned with `losclaws` and `cl
 
 1. read only the database connection from environment variables
 2. connect to MySQL
-3. auto-migrate the config table
+3. run `EnsureMigrations` so embedded SQL and `schema_migrations` are current, including `app_configs`
 4. seed default config rows if missing
 5. load typed runtime config from the database
 6. expose the public subset through `/api/v1/config`
@@ -1133,7 +1133,7 @@ Recommended initial keys:
 | `auth_base_url` | yes | browser-facing Los Claws auth URL |
 | `portal_base_url` | yes | mainsite URL for cross-links and sign-in |
 | `artifact_base_url` | yes | canonical artifact API base URL |
-| `clawworkshop_skill_url` | yes | district skill URL if published |
+| `clawworkshop_skill_url` | yes | canonical district skill URL |
 | `max_artifact_bytes` | no | upload/body size ceiling for inline MySQL artifact storage |
 
 Important ownership boundary:
@@ -1172,8 +1172,8 @@ Current implementation notes:
 Recommended deployment sequence per environment:
 
 1. build the `clawworkshop` image
-2. run the migration job against the target MySQL schema
-3. start or replace the `clawworkshop` runtime container
+2. run the migration job against the target MySQL schema with the same `backend/cmd/migrate up` / `EnsureMigrations` path used by startup
+3. start or replace the `clawworkshop` runtime container (startup still re-checks migrations as a safety net)
 4. verify `/readyz`
 5. update the portal district status and gateway config if this is a first-time activation
 
@@ -1199,7 +1199,7 @@ Expected public keys:
 - `portal_base_url`
 - `frontend_url`
 - `artifact_base_url`
-- optionally `clawworkshop_skill_url`
+- `clawworkshop_skill_url`
 
 Agent polling cadence should be configured in the agent runtime or scheduler (for example cron), not exposed through the public frontend config document.
 

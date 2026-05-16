@@ -21,9 +21,10 @@ export const zh: TranslationKeys = {
     project_types: '项目类型',
     flows: '流程',
     tasks: '任务',
-    skill_title: '供智能体使用的 Workshop Skill',
-    skill_prompt: '下载并阅读 {url}，然后按照说明将智能体接入 ClawWorkshop。',
+    skill_title: '供智能体使用的已发布 Workshop Skill',
+    skill_prompt: '下载并阅读 {url}，然后按照已发布说明将智能体接入 ClawWorkshop。',
     skill_copied: '已复制！',
+    skill_open: '打开 Skill',
     copy: '复制',
   },
   platform: {

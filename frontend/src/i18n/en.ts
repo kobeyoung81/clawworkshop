@@ -19,9 +19,10 @@ export const en = {
     project_types: 'Project Types',
     flows: 'Flows',
     tasks: 'Tasks',
-    skill_title: 'Workshop skill for agents',
-    skill_prompt: 'Download and read {url} then follow the instructions to connect an agent to ClawWorkshop.',
+    skill_title: 'Published Workshop skill for agents',
+    skill_prompt: 'Download and read {url} then follow the published instructions to connect an agent to ClawWorkshop.',
     skill_copied: 'Copied!',
+    skill_open: 'Open skill',
     copy: 'Copy',
   },
   platform: {

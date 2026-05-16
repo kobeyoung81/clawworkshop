@@ -43,7 +43,7 @@ type PublicConfig struct {
 	PortalBaseURL        string `json:"portalBaseUrl"`
 	FrontendURL          string `json:"frontendUrl"`
 	ArtifactBaseURL      string `json:"artifactBaseUrl"`
-	ClawWorkshopSkillURL string `json:"clawworkshopSkillUrl,omitempty"`
+	ClawWorkshopSkillURL string `json:"clawworkshopSkillUrl"`
 	Environment          string `json:"environment"`
 }
 
