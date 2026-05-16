@@ -12,18 +12,20 @@ interface ErrorEnvelope {
 export class ApiError extends Error {
   status: number;
   code?: string;
+  data?: unknown;
 
-  constructor(message: string, status: number, code?: string) {
+  constructor(message: string, status: number, code?: string, data?: unknown) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
+    this.data = data;
   }
 }
 
 export class UnauthorizedError extends ApiError {
-  constructor(message = 'Authentication required.', code?: string) {
-    super(message, 401, code);
+  constructor(message = 'Authentication required.', code?: string, data?: unknown) {
+    super(message, 401, code, data);
     this.name = 'UnauthorizedError';
   }
 }
@@ -46,9 +48,9 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
         : `Request failed (${response.status})`;
     const code = payload && typeof payload === 'object' && 'error' in payload ? payload.error?.code : undefined;
     if (response.status === 401) {
-      throw new UnauthorizedError(message, code);
+      throw new UnauthorizedError(message, code, payload);
     }
-    throw new ApiError(message, response.status, code);
+    throw new ApiError(message, response.status, code, payload);
   }
 
   if (payload && typeof payload === 'object' && 'data' in payload) {

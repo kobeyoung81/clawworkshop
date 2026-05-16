@@ -374,7 +374,7 @@ func (d Dependencies) handleValidateProjectType(w http.ResponseWriter, r *http.R
 
 	validationResult, err := authoring.ValidateDraft(projectType.CurrentDraftJSON)
 	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "validation_failed", "Failed to validate template draft.")
+		writeError(w, r, http.StatusInternalServerError, "validation_failed", "Validation service failed while checking this template draft.")
 		return
 	}
 
@@ -441,7 +441,7 @@ func (d Dependencies) handlePublishProjectType(w http.ResponseWriter, r *http.Re
 
 	validationResult, err := authoring.ValidateDraft(projectType.CurrentDraftJSON)
 	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "publish_validation_failed", "Failed to validate template draft before publishing.")
+		writeError(w, r, http.StatusInternalServerError, "publish_validation_failed", "Validation service failed before publishing this template draft.")
 		return
 	}
 	if !validationResult.Valid {

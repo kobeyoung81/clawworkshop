@@ -309,3 +309,22 @@ export interface ProjectTypeVersionSummary {
   publishedBy: string;
   publishedAt: string;
 }
+
+export interface ValidationFinding {
+  severity: string;
+  code: string;
+  path: string;
+  message: string;
+}
+
+export interface ValidationResult {
+  valid: boolean;
+  highestSeverity: string;
+  findings: ValidationFinding[];
+}
+
+export interface ProjectTypeValidationResponse {
+  projectTypeId: string;
+  draftVersion: number;
+  result: ValidationResult;
+}

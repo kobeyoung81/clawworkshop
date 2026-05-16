@@ -2,10 +2,7 @@ package authoring
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/xeipuuv/gojsonschema"
 )
@@ -157,19 +154,7 @@ func semanticFindings(document ProjectTypeDocument) []ValidationFinding {
 }
 
 func loadSchema() ([]byte, error) {
-	candidates := []string{
-		filepath.Join("..", "docs", "project-type.schema.json"),
-		filepath.Join("..", "..", "docs", "project-type.schema.json"),
-	}
-
-	for _, candidate := range candidates {
-		schemaBytes, err := os.ReadFile(candidate)
-		if err == nil {
-			return schemaBytes, nil
-		}
-	}
-
-	return nil, errors.New("project type schema file not found")
+	return embeddedProjectTypeSchema, nil
 }
 
 func uniqueArtifactMap(path string, artifacts []ArtifactDefinition, findings *[]ValidationFinding) map[string]struct{} {

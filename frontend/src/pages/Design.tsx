@@ -1,11 +1,12 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createProjectType, getCurrentActor, listProjectTypes, listWorkspaces, publishProjectType } from '../api/dashboard';
-import { UnauthorizedError } from '../api/client';
+import { createProjectType, getCurrentActor, listProjectTypes, listWorkspaces, publishProjectType, validateProjectType } from '../api/dashboard';
+import { ApiError, UnauthorizedError } from '../api/client';
 import { DistrictBackground } from '../components/effects/DistrictBackground';
 import { GlassPanel } from '../components/effects/GlassPanel';
 import { getSignInUrl } from '../config';
 import { useI18n } from '../i18n';
+import type { ProjectTypeValidationResponse } from '../types';
 import { EmptyPanel } from './dashboard/shared';
 
 function statusTone(status: string): string {
@@ -132,7 +133,10 @@ export function Design() {
   const [draftJson, setDraftJson] = useState(() => buildDraftTemplate({ key: '', title: '', description: '' }));
   const [formError, setFormError] = useState<string | null>(null);
   const [publishMessage, setPublishMessage] = useState<string | null>(null);
+  const [publishErrorMessage, setPublishErrorMessage] = useState<string | null>(null);
   const [publishingProjectTypeId, setPublishingProjectTypeId] = useState<string | null>(null);
+  const [validationSummary, setValidationSummary] = useState<ProjectTypeValidationResponse | null>(null);
+  const [validationTargetId, setValidationTargetId] = useState<string | null>(null);
 
   const actorQuery = useQuery({
     queryKey: ['current-actor'],
@@ -163,6 +167,7 @@ export function Design() {
     onSuccess: async () => {
       setFormError(null);
       setPublishMessage(t('design.create_success'));
+      setPublishErrorMessage(null);
       setProjectTypeKey('');
       setProjectTypeTitle('');
       setProjectTypeDescription('');
@@ -174,15 +179,45 @@ export function Design() {
   const publishProjectTypeMutation = useMutation({
     mutationFn: publishProjectType,
     onSuccess: async () => {
+      setValidationSummary(null);
       setPublishMessage(t('design.publish_success'));
+      setPublishErrorMessage(null);
       setPublishingProjectTypeId(null);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['project-types'] }),
         queryClient.invalidateQueries({ queryKey: ['public-flowhub-project-types'] }),
       ]);
     },
-    onError: () => {
+    onError: (error) => {
+      setPublishMessage(null);
       setPublishingProjectTypeId(null);
+      if (error instanceof ApiError && error.status === 422) {
+        const data =
+          error.data && typeof error.data === 'object' && 'data' in error.data
+            ? (error.data as { data?: ProjectTypeValidationResponse }).data
+            : null;
+        if (data) {
+          setValidationSummary(data);
+          setValidationTargetId(data.projectTypeId);
+          setPublishErrorMessage(t('design.publish_blocked'));
+          return;
+        }
+      }
+      setPublishErrorMessage(error instanceof Error ? error.message : t('design.publish_internal_error'));
+    },
+  });
+
+  const validateProjectTypeMutation = useMutation({
+    mutationFn: validateProjectType,
+    onSuccess: (result) => {
+      setValidationSummary(result);
+      setValidationTargetId(result.projectTypeId);
+      setPublishErrorMessage(null);
+      setPublishMessage(result.result.valid ? t('design.validate_success') : t('design.validate_found_issues'));
+    },
+    onError: (error) => {
+      setPublishMessage(null);
+      setPublishErrorMessage(error instanceof Error ? error.message : t('design.validate_internal_error'));
     },
   });
 
@@ -193,6 +228,7 @@ export function Design() {
     event.preventDefault();
     setFormError(null);
     setPublishMessage(null);
+    setPublishErrorMessage(null);
 
     if (selectedWorkspaceId === '') {
       setFormError(t('design.workspace_required'));
@@ -218,11 +254,19 @@ export function Design() {
 
   const handlePublish = (projectTypeId: string, expectedVersion: number) => {
     setPublishMessage(null);
+    setPublishErrorMessage(null);
     setPublishingProjectTypeId(projectTypeId);
     publishProjectTypeMutation.mutate({
       projectTypeId,
       expectedVersion,
     });
+  };
+
+  const handleValidate = (projectTypeId: string) => {
+    setPublishMessage(null);
+    setPublishErrorMessage(null);
+    setValidationTargetId(projectTypeId);
+    validateProjectTypeMutation.mutate(projectTypeId);
   };
 
   return (
@@ -393,16 +437,28 @@ export function Design() {
                             <p className="mt-3 text-sm leading-7 text-text-muted">{projectType.description || t('design.no_description')}</p>
                           </div>
                           {projectType.status !== 'published' ? (
-                            <button
-                              type="button"
-                              onClick={() => handlePublish(projectType.id, projectType.version)}
-                              disabled={publishProjectTypeMutation.isPending}
-                              className="btn-cyber whitespace-nowrap px-4 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              {publishProjectTypeMutation.isPending && publishingProjectTypeId === projectType.id
-                                ? t('design.publishing_project_type')
-                                : t('design.publish_project_type_cta')}
-                            </button>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleValidate(projectType.id)}
+                                disabled={validateProjectTypeMutation.isPending}
+                                className="rounded-xl border border-white/10 px-4 py-2 text-xs font-mono uppercase tracking-[0.18em] text-text-muted transition-colors hover:border-accent-cyan/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {validateProjectTypeMutation.isPending && validationTargetId === projectType.id
+                                  ? t('design.validating_project_type')
+                                  : t('design.validate_project_type_cta')}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handlePublish(projectType.id, projectType.version)}
+                                disabled={publishProjectTypeMutation.isPending}
+                                className="btn-cyber whitespace-nowrap px-4 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {publishProjectTypeMutation.isPending && publishingProjectTypeId === projectType.id
+                                  ? t('design.publishing_project_type')
+                                  : t('design.publish_project_type_cta')}
+                              </button>
+                            </div>
                           ) : (
                             <div className="rounded-full border border-accent-cyan/20 bg-accent-cyan/8 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.16em] text-accent-cyan">
                               {t('design.public_badge')}
@@ -416,9 +472,34 @@ export function Design() {
                   <div className="rounded-2xl border border-white/8 bg-black/10 px-4 py-8 text-sm text-text-muted">{t('design.no_managed_project_types')}</div>
                 )}
 
-                {publishProjectTypeMutation.error ? (
+                {publishErrorMessage ? (
                   <div className="mt-4 rounded-xl border border-accent-mag/20 bg-accent-mag/8 px-3 py-2 text-sm text-accent-mag">
-                    {publishProjectTypeMutation.error.message}
+                    {publishErrorMessage}
+                  </div>
+                ) : null}
+                {validationSummary && validationTargetId ? (
+                  <div className="mt-4 rounded-2xl border border-white/8 bg-black/10 p-4">
+                    <div className="mb-2 font-mono text-xs uppercase tracking-[0.18em] text-accent-cyan/60">{t('design.validation_eyebrow')}</div>
+                    <h3 className="text-lg font-semibold text-white">{t('design.validation_title')}</h3>
+                    <p className="mt-2 text-sm text-text-muted">
+                      {validationSummary.result.valid
+                        ? t('design.validation_passed')
+                        : t('design.validation_issue_count', { count: validationSummary.result.findings.length })}
+                    </p>
+                    {validationSummary.result.findings.length > 0 ? (
+                      <div className="mt-4 space-y-3">
+                        {validationSummary.result.findings.map((finding, index) => (
+                          <div key={`${finding.path}-${finding.code}-${index}`} className="rounded-xl border border-accent-amber/20 bg-accent-amber/8 px-3 py-3">
+                            <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono uppercase tracking-[0.16em] text-accent-amber">
+                              <span>{finding.code}</span>
+                              <span className="text-white/15">•</span>
+                              <span>{finding.path || t('design.validation_root_path')}</span>
+                            </div>
+                            <div className="mt-2 text-sm text-white">{finding.message}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
               </GlassPanel>

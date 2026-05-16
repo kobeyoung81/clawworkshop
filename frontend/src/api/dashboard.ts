@@ -10,6 +10,7 @@ import type {
   PublishProjectTypeInput,
   ProjectDetail,
   ProjectTypeSummary,
+  ProjectTypeValidationResponse,
   ProjectTypeVersionSummary,
   ReviewTaskInput,
   StartFlowInput,
@@ -142,6 +143,12 @@ export function publishProjectType(input: PublishProjectTypeInput): Promise<Proj
   return apiRequest<ProjectTypeVersionSummary>(`/api/v1/project-types/${input.projectTypeId}/publish`, {
     method: 'POST',
     body: JSON.stringify({ expectedVersion: input.expectedVersion }),
+  });
+}
+
+export function validateProjectType(projectTypeId: string): Promise<ProjectTypeValidationResponse> {
+  return apiRequest<ProjectTypeValidationResponse>(`/api/v1/project-types/${projectTypeId}/validate`, {
+    method: 'POST',
   });
 }
 

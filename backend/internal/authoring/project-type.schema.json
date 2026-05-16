@@ -1,0 +1,207 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/project-type.schema.json",
+  "title": "AI Agent Workflow Project Type DSL",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["project_type"],
+  "properties": {
+    "project_type": { "$ref": "#/$defs/projectType" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1
+    },
+    "parameter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "required"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "type": {
+          "type": "string",
+          "enum": ["string", "number", "boolean", "object", "array"]
+        },
+        "required": { "type": "boolean" },
+        "default": {},
+        "description": { "type": "string" }
+      }
+    },
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "description", "default_prompt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "kind": {
+          "type": "string",
+          "enum": ["human", "agent"]
+        },
+        "description": { "type": "string" },
+        "default_prompt": { "type": "string" }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "content_kind"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "description": { "type": "string" },
+        "content_kind": {
+          "type": "string",
+          "enum": ["markdown", "image"]
+        },
+        "schema_hint": { "type": "string" }
+      }
+    },
+    "artifactRefs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/identifier" }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "kind": {
+          "type": "string",
+          "enum": ["input", "work", "review", "feedback", "end"]
+        },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "role": { "$ref": "#/$defs/identifier" },
+        "prompt": { "type": "string" },
+        "reads": { "$ref": "#/$defs/artifactRefs" },
+        "writes": { "$ref": "#/$defs/artifactRefs" },
+        "artifacts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/artifact" }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": { "enum": ["review", "feedback"] }
+            },
+            "required": ["kind"]
+          },
+          "then": {
+            "required": ["description", "role", "reads"],
+            "not": {
+              "anyOf": [
+                { "required": ["writes"] },
+                { "required": ["artifacts"] }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "kind": { "const": "end" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                { "required": ["description"] },
+                { "required": ["role"] },
+                { "required": ["prompt"] },
+                { "required": ["reads"] },
+                { "required": ["writes"] },
+                { "required": ["artifacts"] }
+              ]
+            }
+          },
+          "else": {
+            "required": ["description", "role", "reads"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": { "enum": ["input", "work"] }
+            },
+            "required": ["kind"]
+          },
+          "then": {
+            "required": ["writes"]
+          }
+        }
+      ]
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to", "on"],
+      "properties": {
+        "from": { "$ref": "#/$defs/identifier" },
+        "to": { "$ref": "#/$defs/identifier" },
+        "on": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "workflowType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "nodes", "edges"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "description": { "type": "string" },
+        "artifacts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/artifact" }
+        },
+        "nodes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/node" }
+        },
+        "edges": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/edge" }
+        }
+      }
+    },
+    "projectType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "version",
+        "description",
+        "parameters",
+        "roles",
+        "artifacts",
+        "workflow_types"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "description": { "type": "string" },
+        "parameters": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/parameter" }
+        },
+        "roles": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/role" }
+        },
+        "artifacts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/artifact" }
+        },
+        "workflow_types": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/workflowType" }
+        }
+      }
+    }
+  }
+}
