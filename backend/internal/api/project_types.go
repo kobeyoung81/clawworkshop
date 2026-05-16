@@ -68,6 +68,20 @@ type publicProjectTypeResponse struct {
 	PublishedAt     string `json:"publishedAt"`
 }
 
+type publicProjectTypeDetailResponse struct {
+	ID                    string          `json:"id"`
+	WorkspaceID           string          `json:"workspaceId"`
+	WorkspaceName         string          `json:"workspaceName"`
+	Key                   string          `json:"key"`
+	Title                 string          `json:"title"`
+	Description           string          `json:"description"`
+	Status                string          `json:"status"`
+	LatestVersionID       string          `json:"latestVersionId"`
+	LatestVersionNo       int             `json:"latestVersionNo"`
+	PublishedAt           string          `json:"publishedAt"`
+	PublishedSnapshotJSON json.RawMessage `json:"publishedSnapshotJson"`
+}
+
 type validateProjectTypeResponse struct {
 	ProjectTypeID string                     `json:"projectTypeId"`
 	DraftVersion  int64                      `json:"draftVersion"`
@@ -92,6 +106,25 @@ func (d Dependencies) handleListPublicProjectTypes(w http.ResponseWriter, r *htt
 	}
 
 	writeData(w, http.StatusOK, response)
+}
+
+func (d Dependencies) handleGetPublicProjectType(w http.ResponseWriter, r *http.Request) {
+	if !databaseReady(d) {
+		writeError(w, r, http.StatusServiceUnavailable, "database_unavailable", "Database connection is unavailable.")
+		return
+	}
+
+	projectType, err := d.Store.ProjectTypes.GetPublishedPublicByID(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		if err == store.ErrNotFound {
+			writeError(w, r, http.StatusNotFound, "public_project_type_not_found", "Published project type not found.")
+			return
+		}
+		writeError(w, r, http.StatusInternalServerError, "public_project_type_lookup_failed", "Failed to load public project type.")
+		return
+	}
+
+	writeData(w, http.StatusOK, toPublicProjectTypeDetailResponse(*projectType))
 }
 
 func (d Dependencies) handleListProjectTypes(w http.ResponseWriter, r *http.Request) {
@@ -576,5 +609,21 @@ func toPublicProjectTypeResponse(projectType store.PublicProjectTypeSummary) pub
 		LatestVersionID: projectType.LatestVersionID,
 		LatestVersionNo: projectType.LatestVersionNo,
 		PublishedAt:     projectType.PublishedAt.UTC().Format(time.RFC3339),
+	}
+}
+
+func toPublicProjectTypeDetailResponse(projectType store.PublicProjectTypeDetail) publicProjectTypeDetailResponse {
+	return publicProjectTypeDetailResponse{
+		ID:                    projectType.ID,
+		WorkspaceID:           projectType.WorkspaceID,
+		WorkspaceName:         projectType.WorkspaceName,
+		Key:                   projectType.Key,
+		Title:                 projectType.Title,
+		Description:           projectType.Description,
+		Status:                projectType.Status,
+		LatestVersionID:       projectType.LatestVersionID,
+		LatestVersionNo:       projectType.LatestVersionNo,
+		PublishedAt:           projectType.PublishedAt.UTC().Format(time.RFC3339),
+		PublishedSnapshotJSON: projectType.PublishedSnapshotJSON,
 	}
 }

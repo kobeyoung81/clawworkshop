@@ -4,6 +4,7 @@ import { Route, Routes } from 'react-router-dom';
 import { I18nProvider } from './i18n';
 import { TopNavbar } from './components/layout/TopNavbar';
 import { Dashboard } from './pages/Dashboard';
+import { Design } from './pages/Design';
 import { FlowHub } from './pages/FlowHub';
 import { DashboardHomeView } from './pages/dashboard/DashboardHomeView';
 import { ProjectCreateView } from './pages/dashboard/ProjectCreateView';
@@ -25,13 +26,13 @@ function PageFrame({
   variant,
   children,
 }: {
-  variant: 'landing' | 'dashboard' | 'flowhub';
+  variant: 'landing' | 'dashboard' | 'flowhub' | 'design';
   children: ReactNode;
 }) {
   const mainClassName =
-    variant === 'dashboard'
-      ? 'w-full px-4 py-8 sm:px-6 lg:px-8'
-      : 'mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8';
+    variant === 'landing'
+      ? 'mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8'
+      : 'w-full px-4 py-8 sm:px-6 lg:px-8';
 
   return (
     <div className="min-h-screen bg-bg text-text font-body selection:bg-accent-cyan/30 selection:text-accent-cyan">
@@ -71,6 +72,22 @@ function RoutedApp() {
         element={
           <PageFrame variant="flowhub">
             <FlowHub />
+          </PageFrame>
+        }
+      />
+      <Route
+        path="/flowhub/:projectTypeId"
+        element={
+          <PageFrame variant="flowhub">
+            <FlowHub />
+          </PageFrame>
+        }
+      />
+      <Route
+        path="/design"
+        element={
+          <PageFrame variant="design">
+            <Design />
           </PageFrame>
         }
       />

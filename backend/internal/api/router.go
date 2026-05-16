@@ -42,6 +42,7 @@ func NewRouter(deps Dependencies) http.Handler {
 		}
 		r.Get("/config", deps.handlePublicConfig)
 		r.Get("/flowhub/project-types", deps.handleListPublicProjectTypes)
+		r.Get("/flowhub/project-types/{id}", deps.handleGetPublicProjectType)
 		if deps.Auth != nil {
 			r.With(deps.Auth.Require).Get("/auth/me", deps.handleCurrentActor)
 			r.With(deps.Auth.Require).Route("/workspaces", func(workspaces chi.Router) {

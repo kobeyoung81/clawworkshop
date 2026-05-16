@@ -296,6 +296,10 @@ export interface PublicProjectTypeSummary {
   publishedAt: string;
 }
 
+export interface PublicProjectTypeDetail extends PublicProjectTypeSummary {
+  publishedSnapshotJson?: unknown;
+}
+
 export interface ProjectTypeVersionSummary {
   id: string;
   projectTypeId: string;

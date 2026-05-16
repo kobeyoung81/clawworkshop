@@ -7,10 +7,10 @@ import { useI18n } from '../../i18n';
 import type { CurrentActorResponse, DistrictStatsResponse } from '../../types';
 
 interface TopNavbarProps {
-  variant?: 'landing' | 'dashboard' | 'flowhub';
+  variant?: 'landing' | 'dashboard' | 'flowhub' | 'design';
 }
 
-function overviewHref(variant: 'landing' | 'dashboard' | 'flowhub'): string {
+function overviewHref(variant: 'landing' | 'dashboard' | 'flowhub' | 'design'): string {
   return variant === 'landing' ? '#overview' : '/#overview';
 }
 
@@ -94,7 +94,7 @@ function StatusBadge() {
 
 export function TopNavbar({ variant = 'landing' }: TopNavbarProps) {
   const { t } = useI18n();
-  const signInUrl = getSignInUrl(variant === 'flowhub' ? '/flowhub' : '/dashboard');
+  const signInUrl = getSignInUrl(variant === 'design' ? '/design' : variant === 'flowhub' ? '/flowhub' : '/dashboard');
   const actorQuery = useQuery<CurrentActorResponse>({
     queryKey: ['current-actor'],
     queryFn: getCurrentActor,
@@ -125,6 +125,9 @@ export function TopNavbar({ variant = 'landing' }: TopNavbarProps) {
             </Link>
             <Link to="/flowhub" className={navLinkClass(variant === 'flowhub')}>
               {t('nav.flowhub')}
+            </Link>
+            <Link to="/design" className={navLinkClass(variant === 'design')}>
+              {t('nav.design')}
             </Link>
           </div>
         </div>
