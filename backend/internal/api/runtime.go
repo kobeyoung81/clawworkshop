@@ -497,16 +497,13 @@ func (d Dependencies) handleListProjectFlows(w http.ResponseWriter, r *http.Requ
 	}
 
 	response := make([]flowResponse, 0, len(flows))
-	for _, flow := range flows {
-		response = append(response, flowResponse{
-			ID:            flow.ID,
-			ProjectID:     flow.ProjectID,
-			WorkflowKey:   flow.WorkflowKey,
-			FlowSequence:  flow.FlowSequence,
-			Status:        flow.Status,
-			BlockedReason: flow.BlockedReason,
-			Version:       flow.Version,
-		})
+	for i := range flows {
+		flowResponse, err := d.buildFlowResponse(r.Context(), &flows[i])
+		if err != nil {
+			writeError(w, r, http.StatusInternalServerError, "flow_lookup_failed", "Failed to load flow detail.")
+			return
+		}
+		response = append(response, flowResponse)
 	}
 
 	writeData(w, http.StatusOK, response)

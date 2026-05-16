@@ -1,14 +1,21 @@
 import { apiRequest } from './client';
 import type {
   ArtifactSummary,
+  CompleteTaskInput,
   CreateProjectInput,
   CurrentActorResponse,
+  FeedbackTaskInput,
   FlowSummary,
   ProjectDetail,
   ProjectTypeSummary,
   ProjectTypeVersionSummary,
+  ReviewTaskInput,
+  StartFlowInput,
+  TaskDetail,
   ProjectSummary,
+  TaskSummary,
   TaskInboxItem,
+  TaskVersionInput,
   WorkspaceCreateInput,
   WorkspaceSummary,
 } from '../types';
@@ -45,6 +52,65 @@ export function createProject(input: CreateProjectInput): Promise<ProjectDetail>
 
 export function listProjectFlows(projectId: string): Promise<FlowSummary[]> {
   return apiRequest<FlowSummary[]>(`/api/v1/projects/${projectId}/flows`);
+}
+
+export function startFlow(input: StartFlowInput): Promise<FlowSummary> {
+  return apiRequest<FlowSummary>(`/api/v1/projects/${input.projectId}/workflows/${input.workflowId}/start`, {
+    method: 'POST',
+    body: JSON.stringify({ expectedVersion: input.expectedVersion }),
+  });
+}
+
+export function getTask(taskId: string): Promise<TaskDetail> {
+  return apiRequest<TaskDetail>(`/api/v1/tasks/${taskId}`);
+}
+
+export function claimTask(input: TaskVersionInput): Promise<TaskSummary> {
+  return apiRequest<TaskSummary>(`/api/v1/tasks/${input.taskId}/claim`, {
+    method: 'POST',
+    body: JSON.stringify({ expectedVersion: input.expectedVersion }),
+  });
+}
+
+export function releaseTask(input: TaskVersionInput): Promise<TaskSummary> {
+  return apiRequest<TaskSummary>(`/api/v1/tasks/${input.taskId}/release`, {
+    method: 'POST',
+    body: JSON.stringify({ expectedVersion: input.expectedVersion }),
+  });
+}
+
+export function completeTask(input: CompleteTaskInput): Promise<TaskSummary> {
+  return apiRequest<TaskSummary>(`/api/v1/tasks/${input.taskId}/complete`, {
+    method: 'POST',
+    body: JSON.stringify({
+      expectedVersion: input.expectedVersion,
+      outputs: input.outputs,
+    }),
+  });
+}
+
+export function reviewTask(input: ReviewTaskInput): Promise<TaskSummary> {
+  return apiRequest<TaskSummary>(`/api/v1/tasks/${input.taskId}/review`, {
+    method: 'POST',
+    body: JSON.stringify({
+      expectedVersion: input.expectedVersion,
+      expectedSessionVersion: input.expectedSessionVersion,
+      outcome: input.outcome,
+      comment: input.comment,
+    }),
+  });
+}
+
+export function feedbackTask(input: FeedbackTaskInput): Promise<TaskSummary> {
+  return apiRequest<TaskSummary>(`/api/v1/tasks/${input.taskId}/feedback`, {
+    method: 'POST',
+    body: JSON.stringify({
+      expectedVersion: input.expectedVersion,
+      expectedSessionVersion: input.expectedSessionVersion,
+      summary: input.summary,
+      body: input.body,
+    }),
+  });
 }
 
 export function listTaskInbox(): Promise<TaskInboxItem[]> {

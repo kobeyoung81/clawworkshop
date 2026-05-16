@@ -7,6 +7,7 @@ import { Dashboard } from './pages/Dashboard';
 import { DashboardHomeView } from './pages/dashboard/DashboardHomeView';
 import { ProjectCreateView } from './pages/dashboard/ProjectCreateView';
 import { ProjectView } from './pages/dashboard/ProjectView';
+import { TaskView } from './pages/dashboard/TaskView';
 import { WorkspaceView } from './pages/dashboard/WorkspaceView';
 import { Home } from './pages/Home';
 
@@ -62,6 +63,7 @@ function RoutedApp() {
         <Route path="workspaces/:workspaceId" element={<WorkspaceView />} />
         <Route path="workspaces/:workspaceId/projects/new" element={<ProjectCreateView />} />
         <Route path="projects/:projectId" element={<ProjectView />} />
+        <Route path="tasks/:taskId" element={<TaskView />} />
       </Route>
       <Route
         path="*"

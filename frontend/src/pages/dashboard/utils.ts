@@ -17,3 +17,15 @@ export function statusTone(status: string): string {
       return 'border-accent-mag/20 bg-accent-mag/8 text-accent-mag';
   }
 }
+
+export function inferArtifactContentKind(artifactKey: string, currentKind?: string): 'markdown' | 'image' {
+  if (currentKind === 'markdown' || currentKind === 'image') {
+    return currentKind;
+  }
+
+  return /\.(png|jpe?g|gif|webp|svg)$/i.test(artifactKey) ? 'image' : 'markdown';
+}
+
+export function isImageContentKind(contentKind: string): boolean {
+  return contentKind === 'image';
+}

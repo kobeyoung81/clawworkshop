@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { GlassPanel } from '../../components/effects/GlassPanel';
 import { useI18n } from '../../i18n';
 import { useDashboardShellContext } from './context';
@@ -42,7 +43,11 @@ export function DashboardHomeView() {
             {taskItems.map((item) => {
               const workspace = workspaceById.get(item.workspaceId);
               return (
-                <div key={item.task.id} className="rounded-2xl border border-white/8 bg-black/10 p-4 transition-colors hover:border-accent-cyan/15">
+                <Link
+                  key={item.task.id}
+                  to={`/dashboard/tasks/${item.task.id}`}
+                  className="block rounded-2xl border border-white/8 bg-black/10 p-4 transition-colors hover:border-accent-cyan/15"
+                >
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -69,7 +74,7 @@ export function DashboardHomeView() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>

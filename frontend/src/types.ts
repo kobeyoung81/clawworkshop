@@ -138,6 +138,52 @@ export interface FlowSummary {
   tasks?: TaskSummary[];
 }
 
+export interface AssignmentSummary {
+  id: string;
+  assigneeId: string;
+  assigneeType: string;
+  source: string;
+  status: string;
+  version: number;
+  createdBy: string;
+  updatedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReviewDecisionSummary {
+  id: string;
+  reviewerId: string;
+  outcome: string;
+  commentBody: string;
+  createdAt: string;
+}
+
+export interface ReviewSessionSummary {
+  id: string;
+  status: string;
+  outcome?: string;
+  version: number;
+  resolvedAt?: string;
+  decisions?: ReviewDecisionSummary[];
+}
+
+export interface FeedbackEntrySummary {
+  id: string;
+  authorId: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface FeedbackSessionSummary {
+  id: string;
+  status: string;
+  summary?: string;
+  version: number;
+  resolvedAt?: string;
+  entries?: FeedbackEntrySummary[];
+}
+
 export interface ArtifactRevisionSummary {
   id: string;
   revisionNo: number;
@@ -163,6 +209,54 @@ export interface ArtifactSummary {
   version: number;
   currentRevision?: ArtifactRevisionSummary;
   revisions?: ArtifactRevisionSummary[];
+}
+
+export interface TaskDetail {
+  task: TaskSummary;
+  projectId: string;
+  workflowKey: string;
+  flowSequence: number;
+  assignments?: AssignmentSummary[];
+  artifacts?: ArtifactSummary[];
+  reviewSession?: ReviewSessionSummary;
+  feedbackSession?: FeedbackSessionSummary;
+}
+
+export interface StartFlowInput {
+  projectId: string;
+  workflowId: string;
+  expectedVersion: number;
+}
+
+export interface ArtifactWriteInput {
+  artifactKey: string;
+  contentKind: string;
+  mimeType?: string;
+  bodyText?: string;
+  bodyJson?: unknown;
+  bodyBase64?: string;
+  baseRevisionNo?: number;
+}
+
+export interface TaskVersionInput {
+  taskId: string;
+  expectedVersion: number;
+}
+
+export interface CompleteTaskInput extends TaskVersionInput {
+  outputs: ArtifactWriteInput[];
+}
+
+export interface ReviewTaskInput extends TaskVersionInput {
+  expectedSessionVersion: number;
+  outcome: 'approved' | 'revise';
+  comment: string;
+}
+
+export interface FeedbackTaskInput extends TaskVersionInput {
+  expectedSessionVersion: number;
+  summary: string;
+  body: string;
 }
 
 export interface ProjectTypeSummary {
