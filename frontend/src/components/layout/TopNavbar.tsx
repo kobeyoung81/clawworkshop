@@ -7,11 +7,15 @@ import { useI18n } from '../../i18n';
 import type { CurrentActorResponse, DistrictStatsResponse } from '../../types';
 
 interface TopNavbarProps {
-  variant?: 'landing' | 'dashboard';
+  variant?: 'landing' | 'dashboard' | 'flowhub';
 }
 
-function sectionHref(variant: 'landing' | 'dashboard', anchor: string): string {
-  return variant === 'landing' ? `#${anchor}` : `/#${anchor}`;
+function overviewHref(variant: 'landing' | 'dashboard' | 'flowhub'): string {
+  return variant === 'landing' ? '#overview' : '/#overview';
+}
+
+function navLinkClass(active: boolean): string {
+  return `px-4 py-2 text-sm font-medium transition-colors ${active ? 'text-accent-cyan' : 'text-text-muted hover:text-accent-cyan'}`;
 }
 
 function LangToggle() {
@@ -90,7 +94,7 @@ function StatusBadge() {
 
 export function TopNavbar({ variant = 'landing' }: TopNavbarProps) {
   const { t } = useI18n();
-  const signInUrl = getSignInUrl('/dashboard');
+  const signInUrl = getSignInUrl(variant === 'flowhub' ? '/flowhub' : '/dashboard');
   const actorQuery = useQuery<CurrentActorResponse>({
     queryKey: ['current-actor'],
     queryFn: getCurrentActor,
@@ -113,18 +117,15 @@ export function TopNavbar({ variant = 'landing' }: TopNavbarProps) {
           </Link>
 
           <div className="hidden items-center gap-1 md:flex">
-            <a href={sectionHref(variant, 'overview')} className="px-4 py-2 text-sm font-medium text-accent-cyan transition-colors hover:text-white">
+            <a href={overviewHref(variant)} className={navLinkClass(variant === 'landing')}>
               {t('nav.overview')}
             </a>
-            <a href={sectionHref(variant, 'platform')} className="px-4 py-2 text-sm font-medium text-text-muted transition-colors hover:text-accent-cyan">
-              {t('nav.platform')}
-            </a>
-            <a href={sectionHref(variant, 'workflow')} className="px-4 py-2 text-sm font-medium text-text-muted transition-colors hover:text-accent-cyan">
-              {t('nav.workflow')}
-            </a>
-            <a href={sectionHref(variant, 'stats')} className="px-4 py-2 text-sm font-medium text-text-muted transition-colors hover:text-accent-cyan">
-              {t('nav.stats')}
-            </a>
+            <Link to="/dashboard" className={navLinkClass(variant === 'dashboard')}>
+              {t('nav.dashboard')}
+            </Link>
+            <Link to="/flowhub" className={navLinkClass(variant === 'flowhub')}>
+              {t('nav.flowhub')}
+            </Link>
           </div>
         </div>
 

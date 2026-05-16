@@ -59,6 +59,19 @@ export interface WorkspaceCreateInput {
   defaultLocale: 'en' | 'zh';
 }
 
+export interface CreateProjectTypeInput {
+  workspaceId: string;
+  key: string;
+  title: string;
+  description: string;
+  draftJson: unknown;
+}
+
+export interface PublishProjectTypeInput {
+  projectTypeId: string;
+  expectedVersion: number;
+}
+
 export interface ProjectSummary {
   id: string;
   workspaceId: string;
@@ -268,6 +281,19 @@ export interface ProjectTypeSummary {
   status: string;
   version: number;
   currentDraftJson?: unknown;
+}
+
+export interface PublicProjectTypeSummary {
+  id: string;
+  workspaceId: string;
+  workspaceName: string;
+  key: string;
+  title: string;
+  description: string;
+  status: string;
+  latestVersionId: string;
+  latestVersionNo: number;
+  publishedAt: string;
 }
 
 export interface ProjectTypeVersionSummary {

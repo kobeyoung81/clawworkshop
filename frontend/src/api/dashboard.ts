@@ -2,10 +2,12 @@ import { apiRequest } from './client';
 import type {
   ArtifactSummary,
   CompleteTaskInput,
+  CreateProjectTypeInput,
   CreateProjectInput,
   CurrentActorResponse,
   FeedbackTaskInput,
   FlowSummary,
+  PublishProjectTypeInput,
   ProjectDetail,
   ProjectTypeSummary,
   ProjectTypeVersionSummary,
@@ -127,6 +129,20 @@ export function listWorkspaceArtifacts(workspaceId: string): Promise<ArtifactSum
 
 export function listProjectTypes(): Promise<ProjectTypeSummary[]> {
   return apiRequest<ProjectTypeSummary[]>('/api/v1/project-types');
+}
+
+export function createProjectType(input: CreateProjectTypeInput): Promise<ProjectTypeSummary> {
+  return apiRequest<ProjectTypeSummary>('/api/v1/project-types', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function publishProjectType(input: PublishProjectTypeInput): Promise<ProjectTypeVersionSummary> {
+  return apiRequest<ProjectTypeVersionSummary>(`/api/v1/project-types/${input.projectTypeId}/publish`, {
+    method: 'POST',
+    body: JSON.stringify({ expectedVersion: input.expectedVersion }),
+  });
 }
 
 export function listProjectTypeVersions(projectTypeId: string): Promise<ProjectTypeVersionSummary[]> {

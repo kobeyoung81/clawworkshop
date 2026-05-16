@@ -55,10 +55,43 @@ type projectTypeVersionResponse struct {
 	PublishedAt           string          `json:"publishedAt"`
 }
 
+type publicProjectTypeResponse struct {
+	ID              string `json:"id"`
+	WorkspaceID     string `json:"workspaceId"`
+	WorkspaceName   string `json:"workspaceName"`
+	Key             string `json:"key"`
+	Title           string `json:"title"`
+	Description     string `json:"description"`
+	Status          string `json:"status"`
+	LatestVersionID string `json:"latestVersionId"`
+	LatestVersionNo int    `json:"latestVersionNo"`
+	PublishedAt     string `json:"publishedAt"`
+}
+
 type validateProjectTypeResponse struct {
 	ProjectTypeID string                     `json:"projectTypeId"`
 	DraftVersion  int64                      `json:"draftVersion"`
 	Result        authoring.ValidationResult `json:"result"`
+}
+
+func (d Dependencies) handleListPublicProjectTypes(w http.ResponseWriter, r *http.Request) {
+	if !databaseReady(d) {
+		writeError(w, r, http.StatusServiceUnavailable, "database_unavailable", "Database connection is unavailable.")
+		return
+	}
+
+	projectTypes, err := d.Store.ProjectTypes.ListPublishedPublic(r.Context())
+	if err != nil {
+		writeError(w, r, http.StatusInternalServerError, "public_project_type_list_failed", "Failed to list public project types.")
+		return
+	}
+
+	response := make([]publicProjectTypeResponse, 0, len(projectTypes))
+	for _, projectType := range projectTypes {
+		response = append(response, toPublicProjectTypeResponse(projectType))
+	}
+
+	writeData(w, http.StatusOK, response)
 }
 
 func (d Dependencies) handleListProjectTypes(w http.ResponseWriter, r *http.Request) {
@@ -528,5 +561,20 @@ func toProjectTypeVersionResponse(version models.ProjectTypeVersion) projectType
 		SummaryJSON:           version.SummaryJSON,
 		PublishedBy:           version.PublishedBy,
 		PublishedAt:           version.PublishedAt.UTC().Format(time.RFC3339),
+	}
+}
+
+func toPublicProjectTypeResponse(projectType store.PublicProjectTypeSummary) publicProjectTypeResponse {
+	return publicProjectTypeResponse{
+		ID:              projectType.ID,
+		WorkspaceID:     projectType.WorkspaceID,
+		WorkspaceName:   projectType.WorkspaceName,
+		Key:             projectType.Key,
+		Title:           projectType.Title,
+		Description:     projectType.Description,
+		Status:          projectType.Status,
+		LatestVersionID: projectType.LatestVersionID,
+		LatestVersionNo: projectType.LatestVersionNo,
+		PublishedAt:     projectType.PublishedAt.UTC().Format(time.RFC3339),
 	}
 }

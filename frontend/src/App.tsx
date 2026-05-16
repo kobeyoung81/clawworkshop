@@ -4,6 +4,7 @@ import { Route, Routes } from 'react-router-dom';
 import { I18nProvider } from './i18n';
 import { TopNavbar } from './components/layout/TopNavbar';
 import { Dashboard } from './pages/Dashboard';
+import { FlowHub } from './pages/FlowHub';
 import { DashboardHomeView } from './pages/dashboard/DashboardHomeView';
 import { ProjectCreateView } from './pages/dashboard/ProjectCreateView';
 import { ProjectView } from './pages/dashboard/ProjectView';
@@ -24,7 +25,7 @@ function PageFrame({
   variant,
   children,
 }: {
-  variant: 'landing' | 'dashboard';
+  variant: 'landing' | 'dashboard' | 'flowhub';
   children: ReactNode;
 }) {
   const mainClassName =
@@ -65,6 +66,14 @@ function RoutedApp() {
         <Route path="projects/:projectId" element={<ProjectView />} />
         <Route path="tasks/:taskId" element={<TaskView />} />
       </Route>
+      <Route
+        path="/flowhub"
+        element={
+          <PageFrame variant="flowhub">
+            <FlowHub />
+          </PageFrame>
+        }
+      />
       <Route
         path="*"
         element={

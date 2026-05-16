@@ -1,4 +1,5 @@
-import type { DistrictStatsResponse } from '../types';
+import { apiRequest } from './client';
+import type { DistrictStatsResponse, PublicProjectTypeSummary } from '../types';
 
 export async function getDistrictStats(): Promise<DistrictStatsResponse> {
   const response = await fetch('/api/stats');
@@ -9,4 +10,8 @@ export async function getDistrictStats(): Promise<DistrictStatsResponse> {
   }
 
   return payload;
+}
+
+export function listPublicProjectTypes(): Promise<PublicProjectTypeSummary[]> {
+  return apiRequest<PublicProjectTypeSummary[]>('/api/v1/flowhub/project-types');
 }

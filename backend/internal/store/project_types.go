@@ -33,6 +33,19 @@ type PublishProjectTypeParams struct {
 	PublishedBy           string
 }
 
+type PublicProjectTypeSummary struct {
+	ID              string    `gorm:"column:id"`
+	WorkspaceID     string    `gorm:"column:workspace_id"`
+	WorkspaceName   string    `gorm:"column:workspace_name"`
+	Key             string    `gorm:"column:key"`
+	Title           string    `gorm:"column:title"`
+	Description     string    `gorm:"column:description"`
+	Status          string    `gorm:"column:status"`
+	LatestVersionID string    `gorm:"column:latest_version_id"`
+	LatestVersionNo int       `gorm:"column:latest_version_no"`
+	PublishedAt     time.Time `gorm:"column:published_at"`
+}
+
 func (r *ProjectTypeRepository) ListVisible(ctx context.Context, subjectID string) ([]models.ProjectType, error) {
 	var projectTypes []models.ProjectType
 	err := r.db.WithContext(ctx).
@@ -40,6 +53,36 @@ func (r *ProjectTypeRepository) ListVisible(ctx context.Context, subjectID strin
 		Joins("JOIN workspace_member ON workspace_member.workspace_id = project_type.workspace_id").
 		Where("workspace_member.subject_id = ? AND workspace_member.status = ?", subjectID, "active").
 		Order("project_type.updated_at DESC").
+		Find(&projectTypes).Error
+	return projectTypes, err
+}
+
+func (r *ProjectTypeRepository) ListPublishedPublic(ctx context.Context) ([]PublicProjectTypeSummary, error) {
+	var projectTypes []PublicProjectTypeSummary
+	latestVersionSubquery := r.db.WithContext(ctx).
+		Table("project_type_version").
+		Select("project_type_id, MAX(version_no) AS latest_version_no").
+		Group("project_type_id")
+
+	err := r.db.WithContext(ctx).
+		Table("project_type").
+		Select(`
+			project_type.id,
+			project_type.workspace_id,
+			workspace.name AS workspace_name,
+			project_type.key,
+			project_type.title,
+			project_type.description,
+			project_type.status,
+			project_type_version.id AS latest_version_id,
+			project_type_version.version_no AS latest_version_no,
+			project_type_version.published_at
+		`).
+		Joins("JOIN workspace ON workspace.id = project_type.workspace_id").
+		Joins("JOIN (?) latest_version ON latest_version.project_type_id = project_type.id", latestVersionSubquery).
+		Joins("JOIN project_type_version ON project_type_version.project_type_id = project_type.id AND project_type_version.version_no = latest_version.latest_version_no").
+		Where("project_type.status = ?", "published").
+		Order("project_type_version.published_at DESC").
 		Find(&projectTypes).Error
 	return projectTypes, err
 }
